@@ -1,8 +1,7 @@
-// Reusable Tabs primitive (placeholder)
-import React from "react";
+import type { ReactNode } from "react";
 
-const Tabs: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="tabs">{children}</div>
-);
+export function Tabs({ children }: { children: ReactNode }) {
+  return <div>{children}</div>;
+}
 
 export default Tabs;

@@ -1,11 +1,15 @@
-// Reusable Label primitive
-import React from "react";
-import { cn } from "../../lib/utils";
+import type { LabelHTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
 
-type LabelProps = React.LabelHTMLAttributes<HTMLLabelElement>;
+type LabelProps = LabelHTMLAttributes<HTMLLabelElement>;
 
-const Label: React.FC<LabelProps> = ({ className, ...props }) => (
-  <label className={cn("label", className)} {...props} />
-);
+export function Label({ className, ...props }: LabelProps) {
+  return (
+    <label
+      className={cn("text-[13px] font-semibold text-slate-700", className)}
+      {...props}
+    />
+  );
+}
 
 export default Label;

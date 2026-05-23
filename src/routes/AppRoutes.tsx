@@ -1,7 +1,16 @@
-// All <Route> definitions
-import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import DashboardPage from "@/modules/dashboard/pages/DashboardPage";
+import AccountsPage from "@/modules/accounts/pages/AccountsPage";
+import { Navigate } from "react-router-dom";
 
-const AppRoutes = () => <Routes>{/* Define your routes here */}</Routes>;
-
-export default AppRoutes;
+export default function AppRoutes() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/accounts" element={<AccountsPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
