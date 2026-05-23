@@ -19,8 +19,8 @@ const emptyDraft: UserInput = {
   name: "",
   email: "",
   department: "Operations",
-  role: "Team Member",
-  status: "pending",
+  role: "User",
+  status: "active",
   groups: [],
 };
 
@@ -43,13 +43,13 @@ export default function CreateUserDialog({
     <Dialog open={open} onClose={onClose} panelClassName="max-w-[760px]">
       <div className="border-b border-slate-200 px-6 py-5 pr-14">
         <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-blue-600">
-          Invite user
+          Add user
         </div>
         <h2 className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-slate-900">
-          New team member
+          New user
         </h2>
         <p className="mt-1 text-[13px] text-slate-500">
-          Invite a FreightOS user and optionally assign access groups.
+          Add a FreightOS user and optionally assign access groups.
         </p>
       </div>
 
@@ -118,7 +118,6 @@ export default function CreateUserDialog({
                 setDraft({ ...draft, status: event.target.value as UserStatus })
               }
             >
-              <option value="pending">Pending</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </Select>
@@ -168,7 +167,7 @@ export default function CreateUserDialog({
           <Button variant="secondary" onClick={onClose} type="button">
             Cancel
           </Button>
-          <Button type="submit">Send invite</Button>
+          <Button type="submit">Create user</Button>
         </div>
       </form>
     </Dialog>

@@ -58,7 +58,7 @@ export default function EditUserDialog({
               {user.name}
             </h2>
             <p className="mt-1 text-[13px] text-slate-500">
-              Update the basic profile details for this team member.
+              Update the basic profile details for this user.
             </p>
           </div>
 
@@ -124,7 +124,6 @@ export default function EditUserDialog({
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
               </Select>
             </div>
           </div>

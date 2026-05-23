@@ -4,9 +4,9 @@ export const SEED_AUDIT_LOGS: AuditLog[] = [
   {
     id: "log-001",
     actor: "Alex Morgan",
-    action: "invite",
+    action: "create",
     module: "Account Management",
-    description: "Invited james@freightos.com with Operations Core access.",
+    description: "Created james@freightos.com with Operations Core access.",
     timestamp: "2 min ago",
   },
   {
@@ -14,7 +14,7 @@ export const SEED_AUDIT_LOGS: AuditLog[] = [
     actor: "Alex Morgan",
     action: "update",
     module: "Groups",
-    description: "Updated Priya Singh from Compliance Review to Super Admin.",
+    description: "Updated Priya Singh from Marketing Desk to Super Admin.",
     timestamp: "18 min ago",
   },
   {
@@ -22,8 +22,7 @@ export const SEED_AUDIT_LOGS: AuditLog[] = [
     actor: "Sarah Chen",
     action: "create",
     module: "Groups",
-    description:
-      "Created Finance Desk with invoicing, finance, and reports access.",
+    description: "Created Finance Desk with finance access.",
     timestamp: "1 hr ago",
   },
   {
@@ -38,8 +37,8 @@ export const SEED_AUDIT_LOGS: AuditLog[] = [
     id: "log-005",
     actor: "Priya Singh",
     action: "update",
-    module: "Documents",
-    description: "Adjusted document retention access for the warehouse team.",
+    module: "Marketing",
+    description: "Adjusted campaign access for the marketing team.",
     timestamp: "Yesterday",
   },
 ];

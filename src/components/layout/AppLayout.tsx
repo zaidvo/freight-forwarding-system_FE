@@ -7,14 +7,10 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  FileText,
   LayoutGrid,
-  MapPin,
-  Receipt,
-  Settings,
   Ship,
-  Users,
   Wallet,
+  ShoppingCart,
 } from "lucide-react";
 
 type LayoutProps = {
@@ -35,26 +31,19 @@ const mainSections: Array<{ title: string; items: NavItem[] }> = [
   },
   {
     title: "Operations",
-    items: [
-      { label: "Shipments", icon: Ship, soon: true },
-      { label: "Tracking", icon: MapPin, soon: true },
-      { label: "Documents", icon: FileText, soon: true },
-    ],
+    items: [{ label: "Operations", icon: Ship, soon: true }],
   },
   {
     title: "Finance",
-    items: [
-      { label: "Invoicing", icon: Receipt, soon: true },
-      { label: "Finance", icon: Wallet, soon: true },
-      { label: "Reports", icon: BarChart3, soon: true },
-    ],
+    items: [{ label: "Finance", icon: Wallet, soon: true }],
   },
   {
-    title: "Admin",
-    items: [
-      { label: "Account Management", to: "/accounts", icon: Users },
-      { label: "Settings", icon: Settings, soon: true },
-    ],
+    title: "Sales",
+    items: [{ label: "Sales", icon: ShoppingCart, soon: true }],
+  },
+  {
+    title: "Marketing",
+    items: [{ label: "Marketing", icon: BarChart3, soon: true }],
   },
 ];
 

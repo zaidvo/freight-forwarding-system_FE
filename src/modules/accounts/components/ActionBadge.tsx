@@ -4,7 +4,6 @@ const ACTION_STYLES: Record<AuditAction, string> = {
   create: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   update: "bg-blue-50 text-blue-700 ring-blue-200",
   delete: "bg-rose-50 text-rose-700 ring-rose-200",
-  invite: "bg-amber-50 text-amber-700 ring-amber-200",
 };
 
 export default function ActionBadge({ action }: { action: AuditAction }) {

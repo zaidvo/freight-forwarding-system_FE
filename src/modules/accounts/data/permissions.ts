@@ -8,14 +8,14 @@ export type ModuleAccessOption = {
 
 export const MODULE_ACCESS_OPTIONS: ModuleAccessOption[] = [
   {
-    key: "shipments",
-    label: "Shipments",
-    description: "Shipment creation and tracking workflows.",
+    key: "account-management",
+    label: "Account Management",
+    description: "Users, groups, and access control.",
   },
   {
-    key: "invoicing",
-    label: "Invoicing",
-    description: "Invoices, billing, and collections.",
+    key: "operations",
+    label: "Operations",
+    description: "Shipment handling, movement, and execution workflows.",
   },
   {
     key: "finance",
@@ -23,28 +23,13 @@ export const MODULE_ACCESS_OPTIONS: ModuleAccessOption[] = [
     description: "Cash flow, reconciliation, and ledger views.",
   },
   {
-    key: "documents",
-    label: "Documents",
-    description: "Files, records, and shared docs.",
+    key: "sales",
+    label: "Sales",
+    description: "Pipeline, opportunities, and customer-facing activity.",
   },
   {
-    key: "tracking",
-    label: "Tracking",
-    description: "Live tracking and milestones.",
-  },
-  {
-    key: "reports",
-    label: "Reports",
-    description: "Operational and financial reporting.",
-  },
-  {
-    key: "account-management",
-    label: "Account Management",
-    description: "Users, groups, and access control.",
-  },
-  {
-    key: "settings",
-    label: "Settings",
-    description: "Workspace and platform settings.",
+    key: "marketing",
+    label: "Marketing",
+    description: "Campaigns, outreach, and brand activity.",
   },
 ];

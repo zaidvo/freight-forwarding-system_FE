@@ -1,14 +1,11 @@
-export type UserStatus = "active" | "inactive" | "pending";
+export type UserStatus = "active" | "inactive";
 
 export type ModuleKey =
-  | "shipments"
-  | "invoicing"
-  | "finance"
-  | "documents"
-  | "tracking"
-  | "reports"
   | "account-management"
-  | "settings";
+  | "operations"
+  | "finance"
+  | "sales"
+  | "marketing";
 
 export type UserInput = {
   name: string;
@@ -34,7 +31,7 @@ export type Group = {
 
 export type Role = Group;
 
-export type AuditAction = "create" | "update" | "delete" | "invite";
+export type AuditAction = "create" | "update" | "delete";
 
 export type AuditLog = {
   id: string;

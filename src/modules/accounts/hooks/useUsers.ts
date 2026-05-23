@@ -17,7 +17,7 @@ export function useUsers() {
             .slice(0, 2)
             .join("")
             .toUpperCase(),
-          lastActive: "Just invited",
+          lastActive: "Just now",
         },
       ]),
     [],

@@ -11,8 +11,8 @@ export default function DashboardPage() {
             Welcome back, Alex
           </h1>
           <p className="mt-1 text-[14px] text-slate-500">
-            Select a module to open. Only Account Management is active in this
-            build.
+            Select one of the five modules below. Only Account Management is
+            active in this build.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">

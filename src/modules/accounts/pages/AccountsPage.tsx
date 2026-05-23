@@ -85,7 +85,6 @@ export default function AccountsPage() {
       totalUsers: users.length,
       activeUsers: users.filter((user) => user.status === "active").length,
       groupsDefined: groups.length,
-      pendingInvites: users.filter((user) => user.status === "pending").length,
     }),
     [groups.length, users],
   );
@@ -123,13 +122,13 @@ export default function AccountsPage() {
         .slice(0, 2)
         .join("")
         .toUpperCase(),
-      lastActive: "Just invited",
+      lastActive: "Just now",
     };
     setUsers((current) => [newUser, ...current]);
     appendAudit(
-      "invite",
+      "create",
       "Account Management",
-      `Invited ${values.email} with ${values.groups.length} group(s).`,
+      `Created ${values.email} with ${values.groups.length} group(s).`,
     );
   };
 
@@ -289,8 +288,8 @@ export default function AccountsPage() {
               Account Management
             </h1>
             <p className="mt-1 text-[14px] text-slate-500">
-              Manage FreightOS team members, groups, and module access across
-              the platform.
+              Manage FreightOS users, groups, and module access across the
+              platform.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -349,11 +348,13 @@ export default function AccountsPage() {
                 note="Working access groups"
               />
               <StatCard
-                label="Pending Invites"
-                value={String(stats.pendingInvites)}
+                label="Inactive Users"
+                value={String(
+                  users.filter((user) => user.status === "inactive").length,
+                )}
                 icon={Clock3}
                 accent="bg-amber-500"
-                note="Users waiting to accept"
+                note="Users blocked from signing in"
               />
             </div>
 
@@ -376,7 +377,6 @@ export default function AccountsPage() {
                 <option value="all">All</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
               </Select>
             </div>
 

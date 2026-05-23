@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 const MAP: Record<UserStatus, string> = {
   active: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   inactive: "bg-slate-100 text-slate-600 ring-slate-200",
-  pending: "bg-amber-50 text-amber-700 ring-amber-200",
 };
 
 export function StatusPill({ status }: { status: UserStatus }) {
