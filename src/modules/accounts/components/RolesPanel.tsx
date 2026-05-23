@@ -1,21 +1,22 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
-import { MODULE_ACCESS_OPTIONS } from "../data/permissions";
-import type { Group, ModuleKey } from "../types";
+import type { AppModule, Group } from "../types";
 
 type RolesPanelProps = {
   groups: Group[];
-  membersByGroup: Record<string, number>;
-  onAddGroup: (name: string) => void;
-  onRenameGroup: (groupId: string, name: string) => void;
-  onToggleModule: (groupId: string, module: ModuleKey) => void;
-  onDeleteGroup: (groupId: string) => void;
+  modules: AppModule[];
+  membersByGroup: Record<number, number>;
+  onAddGroup: (name: string) => Promise<void>;
+  onRenameGroup: (groupId: number, name: string) => Promise<void>;
+  onToggleModule: (groupId: number, moduleId: number) => Promise<void>;
+  onDeleteGroup: (groupId: number) => Promise<void>;
 };
 
 export default function RolesPanel({
   groups,
+  modules,
   membersByGroup,
   onAddGroup,
   onRenameGroup,
@@ -23,18 +24,22 @@ export default function RolesPanel({
   onDeleteGroup,
 }: RolesPanelProps) {
   const [draftName, setDraftName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const createDisabled = draftName.trim().length === 0;
-  const moduleLookup = useMemo(
-    () => new Map(MODULE_ACCESS_OPTIONS.map((option) => [option.key, option])),
-    [],
-  );
+  const createDisabled = draftName.trim().length === 0 || saving;
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="rounded-[16px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
+        </div>
+      )}
+
       <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
+        <div className="flex flex-col gap-4">
+          <div>
             <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
               Create group
             </div>
@@ -45,102 +50,178 @@ export default function RolesPanel({
               className="mt-2"
             />
           </div>
-          <Button
-            onClick={() => {
-              onAddGroup(draftName.trim());
-              setDraftName("");
-            }}
-            disabled={createDisabled}
-          >
-            Create group
-          </Button>
+          <div className="flex justify-end">
+            <Button
+              onClick={async () => {
+                setSaving(true);
+                setError(null);
+                try {
+                  await onAddGroup(draftName.trim());
+                  setDraftName("");
+                } catch (err) {
+                  setError(
+                    err instanceof Error ? err.message : "Unable to create group.",
+                  );
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              disabled={createDisabled}
+            >
+              {saving ? "Creating..." : "Create group"}
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        {groups.map((group) => (
-          <div
-            key={group.id}
-            className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(22,31,54,0.05)]"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
-                <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                  Group name
-                </div>
-                <Input
-                  value={group.name}
-                  onChange={(event) =>
-                    onRenameGroup(group.id, event.target.value)
-                  }
-                  className="mt-2"
-                />
-              </div>
-              <div className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-600">
-                {membersByGroup[group.id] ?? 0} members
-              </div>
-            </div>
-
-            <p className="mt-3 text-[13px] leading-6 text-slate-500">
-              {group.description}
-            </p>
-
-            <div className="mt-4 space-y-3 rounded-[16px] bg-slate-50 p-4">
-              <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                Module access
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {MODULE_ACCESS_OPTIONS.map((option) => {
-                  const active = group.modules.includes(option.key);
-                  return (
-                    <label
-                      key={option.key}
-                      className="flex items-start gap-3 rounded-[14px] border border-slate-200 bg-white p-3 text-left shadow-[0_4px_14px_rgba(22,31,54,0.03)]"
-                    >
-                      <Checkbox
-                        checked={active}
-                        onChange={() => onToggleModule(group.id, option.key)}
-                        className="mt-0.5"
-                      />
-                      <div>
-                        <div className="text-[13px] font-semibold text-slate-900">
-                          {option.label}
-                        </div>
-                        <div className="mt-1 text-[12px] leading-5 text-slate-400">
-                          {option.description}
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2">
-                {group.modules.map((moduleKey) => {
-                  const module = moduleLookup.get(moduleKey);
-                  return (
-                    <span
-                      key={moduleKey}
-                      className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700"
-                    >
-                      {module?.label ?? moduleKey}
-                    </span>
-                  );
-                })}
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onDeleteGroup(group.id)}
-              >
-                Delete group
-              </Button>
-            </div>
+        {groups.length ? (
+          groups.map((group) => (
+            <GroupCard
+              key={group.id}
+              group={group}
+              modules={modules}
+              members={membersByGroup[group.id] ?? 0}
+              onRenameGroup={onRenameGroup}
+              onToggleModule={onToggleModule}
+              onDeleteGroup={onDeleteGroup}
+              onError={setError}
+            />
+          ))
+        ) : (
+          <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-[0_8px_24px_rgba(22,31,54,0.05)] xl:col-span-2">
+            No groups found.
           </div>
-        ))}
+        )}
       </div>
+    </div>
+  );
+}
+
+function GroupCard({
+  group,
+  modules,
+  members,
+  onRenameGroup,
+  onToggleModule,
+  onDeleteGroup,
+  onError,
+}: {
+  group: Group;
+  modules: AppModule[];
+  members: number;
+  onRenameGroup: (groupId: number, name: string) => Promise<void>;
+  onToggleModule: (groupId: number, moduleId: number) => Promise<void>;
+  onDeleteGroup: (groupId: number) => Promise<void>;
+  onError: (error: string | null) => void;
+}) {
+  const [name, setName] = useState(group.name);
+
+  return (
+    <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+      <div className="flex items-start gap-3">
+        <div className="flex-1">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Group name
+          </div>
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            onBlur={async () => {
+              if (name.trim() === group.name) return;
+              try {
+                await onRenameGroup(group.id, name.trim());
+              } catch (err) {
+                onError(err instanceof Error ? err.message : "Unable to rename group.");
+                setName(group.name);
+              }
+            }}
+            className="mt-2"
+          />
+        </div>
+        <div className="rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-semibold text-slate-600">
+          {members} members
+        </div>
+      </div>
+
+      {group.description && (
+        <p className="mt-3 text-[13px] leading-6 text-slate-500">
+          {group.description}
+        </p>
+      )}
+
+      <div className="mt-4 space-y-3 rounded-[16px] bg-slate-50 p-4">
+        <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Module access
+        </div>
+        <ModulePicker
+          modules={modules}
+          selectedIds={group.modules}
+          onToggle={async (moduleId) => {
+            try {
+              await onToggleModule(group.id, moduleId);
+            } catch (err) {
+              onError(
+                err instanceof Error ? err.message : "Unable to update modules.",
+              );
+            }
+          }}
+        />
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={async () => {
+            try {
+              await onDeleteGroup(group.id);
+            } catch (err) {
+              onError(err instanceof Error ? err.message : "Unable to delete group.");
+            }
+          }}
+        >
+          Delete group
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ModulePicker({
+  modules,
+  selectedIds,
+  onToggle,
+}: {
+  modules: AppModule[];
+  selectedIds: number[];
+  onToggle: (moduleId: number) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {modules.map((module) => {
+        const active = selectedIds.includes(module.id);
+        return (
+          <label
+            key={module.id}
+            className="flex items-start gap-3 rounded-[14px] border border-slate-200 bg-white p-3 text-left shadow-[0_4px_14px_rgba(22,31,54,0.03)]"
+          >
+            <Checkbox
+              checked={active}
+              onChange={() => onToggle(module.id)}
+              className="mt-0.5"
+            />
+            <div>
+              <div className="text-[13px] font-semibold text-slate-900">
+                {module.name}
+              </div>
+              <div className="mt-1 text-[12px] leading-5 text-slate-400">
+                {module.isActive ? "Active module" : "Coming soon"}
+              </div>
+            </div>
+          </label>
+        );
+      })}
     </div>
   );
 }

@@ -14,7 +14,7 @@ export const SEED_AUDIT_LOGS: AuditLog[] = [
     actor: "Alex Morgan",
     action: "update",
     module: "Groups",
-    description: "Updated Priya Singh from Marketing Desk to Super Admin.",
+    description: "Updated Priya Singh from Marketing Desk to Root.",
     timestamp: "18 min ago",
   },
   {
