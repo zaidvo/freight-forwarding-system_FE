@@ -1,41 +1,40 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { Select } from "@/components/ui/Select";
-import type { Group, UserInput, UserStatus } from "../types";
+import { Eye, EyeOff } from "lucide-react";
+import type { UserInput } from "../types";
 
 type CreateUserDialogProps = {
   open: boolean;
-  groups: Group[];
-  departments: string[];
   onClose: () => void;
-  onCreate: (values: UserInput) => void;
+  onCreate: (values: UserInput) => Promise<void>;
 };
 
 const emptyDraft: UserInput = {
-  name: "",
+  full_name: "",
   email: "",
-  department: "Operations",
-  role: "User",
-  status: "active",
+  password: "",
   groups: [],
 };
 
 export default function CreateUserDialog({
   open,
-  groups,
-  departments,
   onClose,
   onCreate,
 }: CreateUserDialogProps) {
   const [draft, setDraft] = useState<UserInput>(emptyDraft);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (open) {
       setDraft(emptyDraft);
+      setError(null);
+      setSaving(false);
+      setShowPassword(false);
     }
   }, [open]);
 
@@ -49,16 +48,27 @@ export default function CreateUserDialog({
           New user
         </h2>
         <p className="mt-1 text-[13px] text-slate-500">
-          Add a FreightOS user and optionally assign access groups.
+          Add a FreightOS user using the backend user fields.
         </p>
       </div>
 
       <form
+        autoComplete="off"
         className="grid gap-4 px-6 py-5"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          onCreate(draft);
-          onClose();
+          setError(null);
+          setSaving(true);
+          try {
+            await onCreate(draft);
+            onClose();
+          } catch (err) {
+            setError(
+              err instanceof Error ? err.message : "Unable to create user.",
+            );
+          } finally {
+            setSaving(false);
+          }
         }}
       >
         <div className="grid gap-4 md:grid-cols-2">
@@ -66,9 +76,10 @@ export default function CreateUserDialog({
             <Label htmlFor="create-name">Full name</Label>
             <Input
               id="create-name"
-              value={draft.name}
+              required
+              value={draft.full_name}
               onChange={(event) =>
-                setDraft({ ...draft, name: event.target.value })
+                setDraft({ ...draft, full_name: event.target.value })
               }
             />
           </div>
@@ -77,97 +88,59 @@ export default function CreateUserDialog({
             <Input
               id="create-email"
               type="email"
+              required
               value={draft.email}
               onChange={(event) =>
                 setDraft({ ...draft, email: event.target.value })
               }
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-department">Department</Label>
-            <Select
-              id="create-department"
-              value={draft.department}
-              onChange={(event) =>
-                setDraft({ ...draft, department: event.target.value })
-              }
-            >
-              {departments.map((department) => (
-                <option key={department} value={department}>
-                  {department}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-role">Job role</Label>
-            <Input
-              id="create-role"
-              value={draft.role}
-              onChange={(event) =>
-                setDraft({ ...draft, role: event.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="create-status">Status</Label>
-            <Select
-              id="create-status"
-              value={draft.status}
-              onChange={(event) =>
-                setDraft({ ...draft, status: event.target.value as UserStatus })
-              }
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </Select>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="create-password">Password</Label>
+            <div className="relative">
+              <Input
+                id="create-password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                name="account-create-password"
+                required
+                minLength={8}
+                maxLength={128}
+                value={draft.password ?? ""}
+                onChange={(event) =>
+                  setDraft({ ...draft, password: event.target.value })
+                }
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-[18px] border border-slate-200 bg-slate-50 p-4">
-          <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-            Initial groups
+        {error && (
+          <div className="rounded-[14px] border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">
+            {error}
           </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {groups.map((group) => {
-              const selected = draft.groups.includes(group.id);
-              return (
-                <label
-                  key={group.id}
-                  className="flex items-start gap-3 rounded-[14px] border border-slate-200 bg-white p-3"
-                >
-                  <Checkbox
-                    checked={selected}
-                    onChange={() =>
-                      setDraft({
-                        ...draft,
-                        groups: selected
-                          ? draft.groups.filter(
-                              (groupId) => groupId !== group.id,
-                            )
-                          : [...draft.groups, group.id],
-                      })
-                    }
-                  />
-                  <div>
-                    <div className="text-[13px] font-semibold text-slate-900">
-                      {group.name}
-                    </div>
-                    <div className="mt-1 text-[12px] text-slate-400">
-                      {group.description}
-                    </div>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </div>
+        )}
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
           <Button variant="secondary" onClick={onClose} type="button">
             Cancel
           </Button>
-          <Button type="submit">Create user</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? "Creating..." : "Create user"}
+          </Button>
         </div>
       </form>
     </Dialog>

@@ -9,7 +9,7 @@ type PermissionsDialogProps = {
   user: User | null;
   groups: Group[];
   onClose: () => void;
-  onSave: (userId: string, groupIds: string[]) => void;
+  onSave: (userId: number, groupIds: number[]) => Promise<void>;
 };
 
 export default function PermissionsDialog({
@@ -19,11 +19,15 @@ export default function PermissionsDialog({
   onClose,
   onSave,
 }: PermissionsDialogProps) {
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && user) {
       setSelectedGroups(user.groups);
+      setError(null);
+      setSaving(false);
     }
   }, [open, user]);
 
@@ -48,7 +52,7 @@ export default function PermissionsDialog({
               Groups access
             </div>
             <h2 className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-slate-900">
-              {user.name}
+              {user.full_name}
             </h2>
             <p className="mt-1 text-[13px] text-slate-500">
               Check the groups this user belongs to. Their module access is
@@ -93,6 +97,11 @@ export default function PermissionsDialog({
                 Selected groups: {selectedGroupNames.join(", ")}
               </div>
             )}
+            {error && (
+              <div className="mt-4 rounded-[14px] border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">
+                {error}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
@@ -101,13 +110,24 @@ export default function PermissionsDialog({
             </Button>
             <Button
               type="button"
-              onClick={() => {
+              disabled={saving}
+              onClick={async () => {
                 if (!user) return;
-                onSave(user.id, selectedGroups);
-                onClose();
+                setSaving(true);
+                setError(null);
+                try {
+                  await onSave(user.id, selectedGroups);
+                  onClose();
+                } catch (err) {
+                  setError(
+                    err instanceof Error ? err.message : "Unable to save groups.",
+                  );
+                } finally {
+                  setSaving(false);
+                }
               }}
             >
-              Save groups
+              {saving ? "Saving..." : "Save groups"}
             </Button>
           </div>
         </div>

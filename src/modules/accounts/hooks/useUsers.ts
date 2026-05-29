@@ -1,42 +1,26 @@
 import { useCallback, useState } from "react";
-import type { User, UserInput } from "../types";
-import { SEED_USERS } from "../data/seed";
+import type { User } from "../types";
 
-export function useUsers() {
-  const [users, setUsers] = useState<User[]>(SEED_USERS);
-  const add = useCallback(
-    (u: UserInput) =>
-      setUsers((prev) => [
-        ...prev,
-        {
-          ...u,
-          id: crypto.randomUUID(),
-          avatar: u.name
-            .split(" ")
-            .map((part) => part[0])
-            .slice(0, 2)
-            .join("")
-            .toUpperCase(),
-          lastActive: "Just now",
-        },
-      ]),
-    [],
-  );
+export function useUsers(initialUsers: User[] = []) {
+  const [users, setUsers] = useState<User[]>(initialUsers);
   const update = useCallback(
-    (id: string, patch: Partial<User>) =>
+    (id: number, patch: Partial<User>) =>
       setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, ...patch } : u)),
+        prev.map((user) => (user.id === id ? { ...user, ...patch } : user)),
       ),
     [],
   );
   const remove = useCallback(
-    (id: string) => setUsers((prev) => prev.filter((u) => u.id !== id)),
+    (id: number) =>
+      setUsers((prev) => prev.filter((user) => user.id !== id)),
     [],
   );
   const updateGroups = useCallback(
-    (id: string, groups: string[]) =>
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, groups } : u))),
+    (id: number, groups: number[]) =>
+      setUsers((prev) =>
+        prev.map((user) => (user.id === id ? { ...user, groups } : user)),
+      ),
     [],
   );
-  return { users, add, update, remove, updateGroups };
+  return { users, setUsers, update, remove, updateGroups };
 }

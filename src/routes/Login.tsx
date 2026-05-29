@@ -17,11 +17,11 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { SEED_USERS } from "@/modules/accounts/data/seed";
+import { forgotPassword, login } from "@/services/authService";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("alex@freightos.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,53 +29,34 @@ export default function LoginPage() {
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    setTimeout(() => {
-      const user = SEED_USERS.find(
-        (entry) => entry.email.toLowerCase() === email.trim().toLowerCase(),
-      );
-
-      if (!user) {
-        setLoading(false);
-        setError("No account was found for this email.");
-        return;
-      }
-
-      if (user.status !== "active") {
-        setLoading(false);
-        setError(
-          "This account is inactive. Contact an administrator to regain access.",
-        );
-        return;
-      }
-
+    try {
+      await login(email.trim(), password);
       navigate("/");
-    }, 600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to sign in.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const onResetPassword = (e: React.FormEvent) => {
+  const onResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetSent(false);
     setError(null);
     setLoading(true);
-
-    setTimeout(() => {
-      const user = SEED_USERS.find(
-        (entry) => entry.email.toLowerCase() === email.trim().toLowerCase(),
-      );
-
-      if (!user) {
-        setLoading(false);
-        setError("No account was found for this email.");
-        return;
-      }
-
+    try {
+      await forgotPassword(email.trim());
       setLoading(false);
       setResetSent(true);
-    }, 700);
+    } catch {
+      setError("Unable to prepare a reset link.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

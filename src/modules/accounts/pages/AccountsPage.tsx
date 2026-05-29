@@ -1,24 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import {
+  Clock3,
   Download,
   FolderTree,
   Search,
+  UserCheck,
   UserPlus,
   Users,
-  UserCheck,
-  Clock3,
 } from "lucide-react";
-import {
-  DEPARTMENTS,
-  SEED_AUDIT_LOGS,
-  SEED_GROUPS,
-  SEED_USERS,
-  MODULE_ACCESS_OPTIONS,
-} from "../data/seed";
+import { SEED_AUDIT_LOGS } from "../data/seed";
 import { UsersTable } from "../components/UsersTable";
 import StatCard from "../components/StatCard";
 import RolesPanel from "../components/RolesPanel";
@@ -30,15 +24,32 @@ import DeleteUserDialog from "../components/DeleteUserDialog";
 import type {
   AuditAction,
   AuditLog,
+  AppModule,
   Group,
   User,
   UserInput,
   UserStatus,
 } from "../types";
+import {
+  createUser,
+  deactivateUser,
+  listUsers,
+  updateUser,
+} from "@/services/userService";
+import type { BackendGroup, BackendModule, BackendUser } from "@/services/api";
+import { listModules } from "@/services/moduleService";
+import {
+  createGroup,
+  deleteGroup,
+  listGroups,
+  updateGroup,
+  updateUserGroups,
+} from "@/services/groupService";
 
 export default function AccountsPage() {
-  const [users, setUsers] = useState<User[]>(SEED_USERS);
-  const [groups, setGroups] = useState<Group[]>(SEED_GROUPS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [modules, setModules] = useState<AppModule[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(SEED_AUDIT_LOGS);
   const [activeTab, setActiveTab] = useState<"users" | "groups" | "audit">(
     "users",
@@ -49,6 +60,74 @@ export default function AccountsPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [groupUser, setGroupUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [groupsLoading, setGroupsLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadUsers() {
+      setUsersLoading(true);
+      setUsersError(null);
+      try {
+        const data = await listUsers();
+        if (active) {
+          setUsers(mapBackendUsers(data));
+        }
+      } catch (err) {
+        if (active) {
+          setUsersError(
+            err instanceof Error ? err.message : "Unable to load users.",
+          );
+        }
+      } finally {
+        if (active) {
+          setUsersLoading(false);
+        }
+      }
+    }
+
+    loadUsers();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadAccessData() {
+      setGroupsLoading(true);
+      try {
+        const [moduleData, groupData] = await Promise.all([
+          listModules(),
+          listGroups(),
+        ]);
+        if (active) {
+          setModules(moduleData.map(mapBackendModule));
+          setGroups(groupData.map(mapBackendGroup));
+        }
+      } catch (err) {
+        if (active) {
+          setUsersError(
+            err instanceof Error ? err.message : "Unable to load access data.",
+          );
+        }
+      } finally {
+        if (active) {
+          setGroupsLoading(false);
+        }
+      }
+    }
+
+    loadAccessData();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const groupsById = useMemo(
     () => new Map(groups.map((group) => [group.id, group])),
@@ -56,21 +135,19 @@ export default function AccountsPage() {
   );
 
   const membersByGroup = useMemo(() => {
-    const counts: Record<string, number> = {};
-    users.forEach((user) => {
-      user.groups.forEach((groupId) => {
-        counts[groupId] = (counts[groupId] ?? 0) + 1;
-      });
+    const counts: Record<number, number> = {};
+    groups.forEach((group) => {
+      counts[group.id] = group.userIds.length;
     });
     return counts;
-  }, [users]);
+  }, [groups]);
 
   const filteredUsers = useMemo(
     () =>
       users.filter((user) => {
         const matchesSearch =
           search.trim().length === 0 ||
-          [user.name, user.email, user.department, user.role].some((field) =>
+          [user.full_name, user.email, user.role, user.status].some((field) =>
             field.toLowerCase().includes(search.toLowerCase()),
           );
         const matchesStatus =
@@ -85,14 +162,10 @@ export default function AccountsPage() {
       totalUsers: users.length,
       activeUsers: users.filter((user) => user.status === "active").length,
       groupsDefined: groups.length,
+      inactiveUsers: users.filter((user) => user.status === "inactive").length,
     }),
     [groups.length, users],
   );
-
-  const getGroupNames = (user: User) =>
-    user.groups
-      .map((groupId) => groupsById.get(groupId)?.name)
-      .filter(Boolean) as string[];
 
   const appendAudit = (
     action: AuditAction,
@@ -102,7 +175,7 @@ export default function AccountsPage() {
     setAuditLogs((current) => [
       {
         id: crypto.randomUUID(),
-        actor: "Alex Morgan",
+        actor: "Current admin",
         action,
         module,
         description,
@@ -112,118 +185,136 @@ export default function AccountsPage() {
     ]);
   };
 
-  const handleCreateUser = (values: UserInput) => {
-    const newUser: User = {
-      ...values,
-      id: crypto.randomUUID(),
-      avatar: values.name
-        .split(" ")
-        .map((part) => part[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase(),
-      lastActive: "Just now",
-    };
-    setUsers((current) => [newUser, ...current]);
-    appendAudit(
-      "create",
-      "Account Management",
-      `Created ${values.email} with ${values.groups.length} group(s).`,
-    );
+  const handleCreateUser = async (values: UserInput) => {
+    if (!values.password) {
+      throw new Error("Password is required.");
+    }
+
+    const createdUser = await createUser({
+      full_name: values.full_name,
+      email: values.email,
+      password: values.password,
+    });
+
+    setUsers((current) => withCreatorNames([backendUserToUser(createdUser), ...current]));
+    appendAudit("create", "Account Management", `Created ${values.email}.`);
   };
 
-  const handleSaveUser = (userId: string, values: UserInput) => {
+  const handleSaveUser = async (userId: number, values: UserInput) => {
+    const updatedUser = await updateUser(userId, {
+      full_name: values.full_name,
+      email: values.email,
+      status: values.status,
+      password: values.password?.trim() ? values.password : undefined,
+    });
+
     setUsers((current) =>
-      current.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              ...values,
-              avatar: values.name
-                .split(" ")
-                .map((part) => part[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase(),
-            }
-          : user,
+      withCreatorNames(
+        current.map((user) =>
+          user.id === userId ? mergeBackendUser(user, updatedUser) : user,
+        ),
       ),
     );
     appendAudit(
       "update",
       "Account Management",
-      `Updated ${values.name}'s profile and access details.`,
+      `Updated ${values.full_name}'s profile.`,
     );
   };
 
-  const handleSaveGroups = (userId: string, groupIds: string[]) => {
+  const handleSaveGroups = async (userId: number, groupIds: number[]) => {
     const user = users.find((entry) => entry.id === userId);
+    await updateUserGroups(userId, groupIds);
     setUsers((current) =>
       current.map((entry) =>
         entry.id === userId ? { ...entry, groups: groupIds } : entry,
       ),
     );
+    setGroups((current) =>
+      current.map((group) => ({
+        ...group,
+        userIds: groupIds.includes(group.id)
+          ? Array.from(new Set([...group.userIds, userId]))
+          : group.userIds.filter((entry) => entry !== userId),
+      })),
+    );
     appendAudit(
       "update",
       "Groups",
-      `Updated ${user?.name ?? "a user"} to ${groupIds.length} group(s).`,
+      `Updated ${user?.full_name ?? "a user"} to ${groupIds.length} group(s).`,
     );
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: number) => {
     const user = users.find((entry) => entry.id === userId);
-    setUsers((current) => current.filter((entry) => entry.id !== userId));
+    const deactivatedUser = await deactivateUser(userId);
+    setUsers((current) =>
+      withCreatorNames(
+        current.map((entry) =>
+          entry.id === userId ? mergeBackendUser(entry, deactivatedUser) : entry,
+        ),
+      ),
+    );
     appendAudit(
       "delete",
       "Users",
-      `Deleted ${user?.name ?? "a user"} while keeping audit history.`,
+      `Deactivated ${user?.full_name ?? "a user"} while keeping audit history.`,
     );
   };
 
-  const handleAddGroup = (name: string) => {
+  const handleAddGroup = async (name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) return;
-    const groupId = `grp-${crypto.randomUUID().slice(0, 8)}`;
-    setGroups((current) => [
-      {
-        id: groupId,
-        name: trimmedName,
-        description: "New group created from the admin console.",
-        modules: [],
-      },
-      ...current,
-    ]);
+    const group = await createGroup({
+      name: trimmedName,
+      description: "New group created from the admin console.",
+      module_ids: [],
+    });
+    setGroups((current) => [mapBackendGroup(group), ...current]);
     appendAudit("create", "Groups", `Created group ${trimmedName}.`);
   };
 
-  const handleRenameGroup = (groupId: string, name: string) => {
+  const handleRenameGroup = async (groupId: number, name: string) => {
+    const group = await updateGroup(groupId, { name });
     setGroups((current) =>
-      current.map((group) =>
-        group.id === groupId ? { ...group, name } : group,
+      current.map((entry) =>
+        entry.id === groupId ? mapBackendGroup(group) : entry,
       ),
     );
   };
 
-  const handleToggleModule = (
-    groupId: string,
-    module: (typeof MODULE_ACCESS_OPTIONS)[number]["key"],
-  ) => {
+  const handleToggleModule = async (groupId: number, moduleId: number) => {
+    const group = groups.find((entry) => entry.id === groupId);
+    if (!group) return;
+    const moduleIds = group.modules.includes(moduleId)
+      ? group.modules.filter((entry) => entry !== moduleId)
+      : [...group.modules, moduleId];
     setGroups((current) =>
-      current.map((group) =>
-        group.id === groupId
-          ? {
-              ...group,
-              modules: group.modules.includes(module)
-                ? group.modules.filter((entry) => entry !== module)
-                : [...group.modules, module],
-            }
-          : group,
+      current.map((entry) =>
+        entry.id === groupId ? { ...entry, modules: moduleIds } : entry,
       ),
     );
+    try {
+      const updatedGroup = await updateGroup(groupId, { module_ids: moduleIds });
+      setGroups((current) =>
+        current.map((entry) =>
+          entry.id === groupId ? mapBackendGroup(updatedGroup) : entry,
+        ),
+      );
+    } catch (err) {
+      setGroups((current) =>
+        current.map((entry) =>
+          entry.id === groupId ? { ...entry, modules: group.modules } : entry,
+        ),
+      );
+      throw err;
+    }
   };
 
-  const handleDeleteGroup = (groupId: string) => {
+  const handleDeleteGroup = async (groupId: number) => {
     const group = groupsById.get(groupId);
+    const previousGroups = groups;
+    const previousUsers = users;
     setGroups((current) => current.filter((entry) => entry.id !== groupId));
     setUsers((current) =>
       current.map((user) => ({
@@ -231,11 +322,18 @@ export default function AccountsPage() {
         groups: user.groups.filter((entry) => entry !== groupId),
       })),
     );
-    appendAudit(
-      "delete",
-      "Groups",
-      `Removed ${group?.name ?? "a group"} and revoked access from members.`,
-    );
+    try {
+      await deleteGroup(groupId);
+      appendAudit(
+        "delete",
+        "Groups",
+        `Removed ${group?.name ?? "a group"} and revoked access from members.`,
+      );
+    } catch (err) {
+      setGroups(previousGroups);
+      setUsers(previousUsers);
+      throw err;
+    }
   };
 
   const handleExport = () => {
@@ -243,19 +341,21 @@ export default function AccountsPage() {
       [
         "Name",
         "Email",
-        "Department",
         "Role",
         "Status",
-        "Groups",
-        "Last active",
+        "Created By",
+        "Created At",
+        "Updated At",
+        "Last Active",
       ],
       ...filteredUsers.map((user) => [
-        user.name,
+        user.full_name,
         user.email,
-        user.department,
         user.role,
         user.status,
-        getGroupNames(user).join(" | "),
+        user.created_by_name,
+        user.created_at,
+        user.updated_at,
         user.lastActive,
       ]),
     ];
@@ -331,14 +431,14 @@ export default function AccountsPage() {
                 value={String(stats.totalUsers)}
                 icon={Users}
                 accent="bg-blue-500"
-                note="All seeded users"
+                note="Loaded from backend"
               />
               <StatCard
                 label="Active Users"
                 value={String(stats.activeUsers)}
                 icon={UserCheck}
                 accent="bg-emerald-500"
-                note="Currently online or active"
+                note="Currently active"
               />
               <StatCard
                 label="Groups Defined"
@@ -349,9 +449,7 @@ export default function AccountsPage() {
               />
               <StatCard
                 label="Inactive Users"
-                value={String(
-                  users.filter((user) => user.status === "inactive").length,
-                )}
+                value={String(stats.inactiveUsers)}
                 icon={Clock3}
                 accent="bg-amber-500"
                 note="Users blocked from signing in"
@@ -364,7 +462,7 @@ export default function AccountsPage() {
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by name, email, department, or role"
+                  placeholder="Search by name, email, role, or status"
                   className="pl-9"
                 />
               </div>
@@ -380,25 +478,43 @@ export default function AccountsPage() {
               </Select>
             </div>
 
-            <UsersTable
-              users={filteredUsers}
-              getGroupNames={getGroupNames}
-              onEdit={setEditingUser}
-              onGroups={setGroupUser}
-              onDelete={setDeletingUser}
-            />
+            {usersError && (
+              <div className="rounded-[16px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {usersError}
+              </div>
+            )}
+
+            {usersLoading ? (
+              <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+                Loading users...
+              </div>
+            ) : (
+              <UsersTable
+                users={filteredUsers}
+                onEdit={setEditingUser}
+                onGroups={setGroupUser}
+                onDelete={setDeletingUser}
+              />
+            )}
           </div>
         )}
 
         {activeTab === "groups" && (
-          <RolesPanel
-            groups={groups}
-            membersByGroup={membersByGroup}
-            onAddGroup={handleAddGroup}
-            onRenameGroup={handleRenameGroup}
-            onToggleModule={handleToggleModule}
-            onDeleteGroup={handleDeleteGroup}
-          />
+          groupsLoading ? (
+            <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+              Loading groups...
+            </div>
+          ) : (
+            <RolesPanel
+              groups={groups}
+              modules={modules}
+              membersByGroup={membersByGroup}
+              onAddGroup={handleAddGroup}
+              onRenameGroup={handleRenameGroup}
+              onToggleModule={handleToggleModule}
+              onDeleteGroup={handleDeleteGroup}
+            />
+          )
         )}
 
         {activeTab === "audit" && <AuditLogTable logs={auditLogs} />}
@@ -406,15 +522,12 @@ export default function AccountsPage() {
 
       <CreateUserDialog
         open={createOpen}
-        groups={groups}
-        departments={DEPARTMENTS}
         onClose={() => setCreateOpen(false)}
         onCreate={handleCreateUser}
       />
       <EditUserDialog
         open={Boolean(editingUser)}
         user={editingUser}
-        departments={DEPARTMENTS}
         onClose={() => setEditingUser(null)}
         onSave={handleSaveUser}
       />
@@ -433,4 +546,106 @@ export default function AccountsPage() {
       />
     </AppLayout>
   );
+}
+
+function mapBackendUsers(users: BackendUser[]): User[] {
+  const namesById = new Map(users.map((user) => [user.id, user.full_name]));
+  return users.map((user) => mapBackendUser(user, namesById));
+}
+
+function backendUserToUser(user: BackendUser): User {
+  return mapBackendUser(user, new Map([[user.id, user.full_name]]));
+}
+
+function withCreatorNames(users: User[]): User[] {
+  const namesById = new Map(users.map((user) => [user.id, user.full_name]));
+  return users.map((user) => ({
+    ...user,
+    created_by_name: user.created_by
+      ? (namesById.get(user.created_by) ?? `User #${user.created_by}`)
+      : "System",
+  }));
+}
+
+function mergeBackendUser(existing: User, backendUser: BackendUser): User {
+  return {
+    ...existing,
+    id: backendUser.id,
+    full_name: backendUser.full_name,
+    email: backendUser.email,
+    role: backendUser.role,
+    status: backendUser.status,
+    last_login_at: backendUser.last_login_at,
+    created_by: backendUser.created_by,
+    created_at: backendUser.created_at,
+    updated_at: backendUser.updated_at,
+    groups: backendUser.group_ids ?? existing.groups,
+    avatar: getInitials(backendUser.full_name),
+    lastActive: backendUser.last_login_at
+      ? formatDate(backendUser.last_login_at)
+      : "Never",
+  };
+}
+
+function mapBackendUser(
+  user: BackendUser,
+  namesById: Map<number, string>,
+): User {
+  return {
+    id: user.id,
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    last_login_at: user.last_login_at,
+    created_by: user.created_by,
+    created_by_name: user.created_by
+      ? (namesById.get(user.created_by) ?? `User #${user.created_by}`)
+      : "System",
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    groups: user.group_ids ?? [],
+    avatar: getInitials(user.full_name),
+    lastActive: user.last_login_at ? formatDate(user.last_login_at) : "Never",
+  };
+}
+
+function mapBackendGroup(group: BackendGroup): Group {
+  return {
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    modules: group.module_ids,
+    userIds: group.user_ids,
+  };
+}
+
+function mapBackendModule(module: BackendModule): AppModule {
+  return {
+    id: module.id,
+    name: module.name,
+    slug: module.slug,
+    icon: module.icon,
+    color: module.color,
+    route: module.route,
+    isActive: module.is_active,
+    sortOrder: module.sort_order,
+  };
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
 }
