@@ -4,35 +4,39 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
+import { Eye, EyeOff } from "lucide-react";
 import type { User, UserInput, UserStatus } from "../types";
 
 type EditUserDialogProps = {
   open: boolean;
   user: User | null;
-  departments: string[];
   onClose: () => void;
-  onSave: (userId: string, values: UserInput) => void;
+  onSave: (userId: number, values: UserInput) => Promise<void>;
 };
 
 export default function EditUserDialog({
   open,
   user,
-  departments,
   onClose,
   onSave,
 }: EditUserDialogProps) {
   const [draft, setDraft] = useState<UserInput | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (open && user) {
       setDraft({
-        name: user.name,
+        full_name: user.full_name,
         email: user.email,
-        department: user.department,
-        role: user.role,
+        password: "",
         status: user.status,
         groups: user.groups,
       });
+      setError(null);
+      setSaving(false);
+      setShowPassword(false);
     }
   }, [open, user]);
 
@@ -44,10 +48,21 @@ export default function EditUserDialog({
     >
       {user && draft && (
         <form
-          onSubmit={(event) => {
+          autoComplete="off"
+          onSubmit={async (event) => {
             event.preventDefault();
-            onSave(user.id, draft);
-            onClose();
+            setError(null);
+            setSaving(true);
+            try {
+              await onSave(user.id, draft);
+              onClose();
+            } catch (err) {
+              setError(
+                err instanceof Error ? err.message : "Unable to update user.",
+              );
+            } finally {
+              setSaving(false);
+            }
           }}
         >
           <div className="border-b border-slate-200 px-6 py-5 pr-14">
@@ -55,7 +70,7 @@ export default function EditUserDialog({
               Edit user
             </div>
             <h2 className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-slate-900">
-              {user.name}
+              {user.full_name}
             </h2>
             <p className="mt-1 text-[13px] text-slate-500">
               Update the basic profile details for this user.
@@ -67,9 +82,10 @@ export default function EditUserDialog({
               <Label htmlFor="edit-name">Full name</Label>
               <Input
                 id="edit-name"
-                value={draft.name}
+                required
+                value={draft.full_name}
                 onChange={(event) =>
-                  setDraft({ ...draft, name: event.target.value })
+                  setDraft({ ...draft, full_name: event.target.value })
                 }
               />
             </div>
@@ -78,35 +94,10 @@ export default function EditUserDialog({
               <Input
                 id="edit-email"
                 type="email"
+                required
                 value={draft.email}
                 onChange={(event) =>
                   setDraft({ ...draft, email: event.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-department">Department</Label>
-              <Select
-                id="edit-department"
-                value={draft.department}
-                onChange={(event) =>
-                  setDraft({ ...draft, department: event.target.value })
-                }
-              >
-                {departments.map((department) => (
-                  <option key={department} value={department}>
-                    {department}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-role">Job role</Label>
-              <Input
-                id="edit-role"
-                value={draft.role}
-                onChange={(event) =>
-                  setDraft({ ...draft, role: event.target.value })
                 }
               />
             </div>
@@ -126,13 +117,52 @@ export default function EditUserDialog({
                 <option value="inactive">Inactive</option>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="edit-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  name="account-edit-password"
+                  minLength={8}
+                  maxLength={128}
+                  value={draft.password ?? ""}
+                  onChange={(event) =>
+                    setDraft({ ...draft, password: event.target.value })
+                  }
+                  className="pr-10"
+                  placeholder="Leave blank to keep current password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
+
+          {error && (
+            <div className="mx-6 mb-5 rounded-[14px] border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">
+              {error}
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
             <Button variant="secondary" type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Save changes</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Save changes"}
+            </Button>
           </div>
         </form>
       )}
