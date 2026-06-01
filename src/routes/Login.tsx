@@ -1,5 +1,6 @@
+// src/routes/Login.tsx
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import {
   ArrowRight,
   CheckCircle2,
@@ -17,10 +18,18 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { forgotPassword, login } from "@/services/authService";
+import { useAuth } from "@/providers/AuthProvider";
+import { forgotPassword } from "@/services/authService";
+
+type LocationState = { from?: { pathname: string } };
 
 export default function LoginPage() {
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = (location.state as LocationState)?.from?.pathname ?? "/";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -35,7 +44,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      navigate("/");
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in.");
     } finally {
@@ -50,7 +59,6 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await forgotPassword(email.trim());
-      setLoading(false);
       setResetSent(true);
     } catch {
       setError("Unable to prepare a reset link.");
@@ -92,6 +100,7 @@ export default function LoginPage() {
 
       <div className="flex min-h-screen items-center justify-center px-4 py-8 lg:px-8">
         <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          {/* ── Left panel (desktop only) ── */}
           <section className="hidden lg:block">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 py-2 text-[12px] font-semibold text-slate-600 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl">
               <Sparkles className="h-4 w-4 text-sky-500" />
@@ -139,7 +148,9 @@ export default function LoginPage() {
             </div>
           </section>
 
+          {/* ── Right panel (form) ── */}
           <section className="mx-auto w-full max-w-md">
+            {/* Mobile header */}
             <div className="mb-6 flex items-center gap-3 lg:hidden">
               <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-gradient-to-br from-sky-500 to-cyan-400 shadow-[0_12px_30px_rgba(56,189,248,0.3)]">
                 <Ship className="h-6 w-6 text-white" strokeWidth={1.8} />
@@ -154,6 +165,7 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Desktop header */}
             <div className="hidden lg:flex flex-col items-start gap-4 pb-5 text-left">
               <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br from-sky-500 to-cyan-400 shadow-[0_14px_34px_rgba(56,189,248,0.32)] ring-1 ring-white/50">
                 <Ship className="h-7 w-7 text-white" strokeWidth={1.75} />
@@ -168,6 +180,7 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Card */}
             <div className="relative rounded-[28px] border border-white/70 bg-white/70 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-2xl sm:p-7">
               <div className="absolute inset-0 -z-10 rounded-[28px] bg-gradient-to-br from-white/85 via-white/55 to-cyan-50/80" />
               <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-sky-200 to-transparent" />
@@ -182,6 +195,8 @@ export default function LoginPage() {
                         id="email"
                         type="email"
                         required
+                        autoFocus
+                        autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="h-11 rounded-[14px] border-slate-200 bg-white/85 pl-9 shadow-inner shadow-slate-100"
@@ -207,6 +222,7 @@ export default function LoginPage() {
                         id="password"
                         type={showPw ? "text" : "password"}
                         required
+                        autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="h-11 rounded-[14px] border-slate-200 bg-white/85 pl-9 pr-10 shadow-inner shadow-slate-100"
@@ -282,7 +298,7 @@ export default function LoginPage() {
                       </button>
                     </div>
                     <p className="text-sm leading-6 text-slate-500">
-                      Enter your work email and we’ll prepare a reset link for
+                      Enter your work email and we'll prepare a reset link for
                       your account.
                     </p>
                   </div>
