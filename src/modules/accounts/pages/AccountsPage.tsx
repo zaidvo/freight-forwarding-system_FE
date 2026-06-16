@@ -174,7 +174,7 @@ export default function AccountsPage() {
   ) => {
     setAuditLogs((current) => [
       {
-        id: crypto.randomUUID(),
+        id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         actor: "Current admin",
         action,
         module,

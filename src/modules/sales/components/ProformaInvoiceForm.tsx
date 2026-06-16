@@ -87,7 +87,7 @@ export function ProformaInvoiceFormPanel({ form, onChange }: Props) {
     set("items", [
       ...form.items,
       {
-        id: crypto.randomUUID(),
+        id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         description: "",
         quantity: "1",
         unit: "PCS",

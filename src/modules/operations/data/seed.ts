@@ -16,7 +16,7 @@ export const EMPTY_PACKING_LIST: PackingListForm = {
   marksNumbers: "",
   packages: [
     {
-      id: crypto.randomUUID(),
+      id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       description: "",
       quantity: "1",
       grossWeight: "",

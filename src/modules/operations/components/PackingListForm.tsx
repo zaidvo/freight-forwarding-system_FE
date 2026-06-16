@@ -93,7 +93,7 @@ export function PackingListFormPanel({ form, onChange }: Props) {
     set("packages", [
       ...form.packages,
       {
-        id: crypto.randomUUID(),
+        id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         description: "",
         quantity: "1",
         grossWeight: "",

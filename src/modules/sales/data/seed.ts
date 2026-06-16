@@ -20,7 +20,7 @@ export const EMPTY_PROFORMA: ProformaInvoiceForm = {
   currency: "USD",
   items: [
     {
-      id: crypto.randomUUID(),
+      id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       description: "",
       quantity: "1",
       unit: "PCS",
