@@ -1,19 +1,20 @@
 // src/modules/dashboard/pages/DashboardPage.tsx
 //
-// Company-aware dashboard.
-// Reads activeCompany from CompanyProvider.
-// Freight company → shows freight KPIs + freight module tiles.
-// Trading company → shows trading pipeline KPIs + trading module tiles.
+// Restores original ModuleTile grid style.
+// Company-aware: different modules + KPIs per company.
+// KPI row sits above the tile grid.
 //
 // BE integration:
-//   GET /api/v1/dashboard/freight-stats → replace useTradingStore/useFreightStore counts
-//   GET /api/v1/dashboard/trading-stats → same
+//   GET /api/v1/dashboard/stats → replace useTradingStore/useFreightStore counts
 
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useCompany } from "@/providers/CompanyProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import { useTradingStore } from "@/modules/trading/store/tradingStore";
 import { useFreightStore } from "@/modules/freight/store/freightStore";
+import { ModuleTile } from "../components/ModuleTile";
+import type { ModuleDef } from "../data/modules";
 import {
   Ship,
   Users,
@@ -30,61 +31,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-type ModuleTileProps = {
-  label: string;
-  description: string;
-  icon: LucideIcon;
-  color: string;
-  iconBg: string;
-  to?: string;
-  soon?: boolean;
-};
-
-function ModuleTile({
-  label,
-  description,
-  icon: Icon,
-  color,
-  iconBg,
-  to,
-  soon,
-}: ModuleTileProps) {
-  const navigate = useNavigate();
-  return (
-    <button
-      type="button"
-      disabled={soon || !to}
-      onClick={() => to && navigate(to)}
-      className={`flex flex-col items-start gap-3 rounded-[18px] border border-slate-200 bg-white p-5 text-left shadow-[0_8px_24px_rgba(22,31,54,0.05)] transition ${
-        soon || !to
-          ? "cursor-default opacity-50"
-          : "hover:border-slate-300 hover:shadow-[0_12px_32px_rgba(22,31,54,0.09)]"
-      }`}
-    >
-      <div
-        className={`grid h-11 w-11 place-items-center rounded-[12px] ${iconBg}`}
-      >
-        <Icon className={`h-5 w-5 ${color}`} />
-      </div>
-      <div>
-        <div className="flex items-center gap-2">
-          <span className="text-[14px] font-semibold text-slate-900">
-            {label}
-          </span>
-          {soon && (
-            <span className="rounded-[5px] bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
-              Soon
-            </span>
-          )}
-        </div>
-        <div className="mt-0.5 text-[12px] leading-relaxed text-slate-500">
-          {description}
-        </div>
-      </div>
-    </button>
-  );
-}
-
+// ─── KPI strip ───────────────────────────────────────────────────
 type KpiCard = {
   label: string;
   value: number;
@@ -93,33 +40,117 @@ type KpiCard = {
   bg: string;
 };
 
-function KpiCard({ label, value, icon: Icon, color, bg }: KpiCard) {
+function KpiStrip({ kpis }: { kpis: KpiCard[] }) {
   return (
-    <div className="rounded-[16px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
-            {label}
-          </div>
-          <div className="mt-2 text-[28px] font-bold tracking-[-0.04em] text-slate-900">
-            {value}
-          </div>
-        </div>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {kpis.map(({ label, value, icon: Icon, color, bg }) => (
         <div
-          className={`grid h-11 w-11 place-items-center rounded-[12px] ${bg}`}
+          key={label}
+          className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-white px-4 py-3 shadow-[0_4px_14px_rgba(22,31,54,0.04)]"
         >
-          <Icon className={`h-5 w-5 ${color}`} />
+          <div
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] ${bg}`}
+          >
+            <Icon className={`h-4 w-4 ${color}`} />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+              {label}
+            </div>
+            <div className="text-[20px] font-bold tracking-[-0.03em] text-slate-900">
+              {value}
+            </div>
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
 
-// ─── Freight Dashboard ───────────────────────────────────────────
-function FreightDashboard() {
-  const { shipments, inquiries } = useFreightStore();
+// ─── Module definitions per company ──────────────────────────────
+const FREIGHT_MODULES: ModuleDef[] = [
+  {
+    name: "Freight Operations",
+    icon: Ship,
+    color: "#10b981",
+    to: "/freight",
+    ready: true,
+  },
+  {
+    name: "Packing List",
+    icon: ClipboardList,
+    color: "#3b82f6",
+    to: "/operations/packing-list",
+    ready: true,
+  },
+  {
+    name: "Bill of Lading",
+    icon: FileText,
+    color: "#0ea5e9",
+    to: "/operations/bill-of-lading",
+    ready: true,
+  },
+  {
+    name: "Account Management",
+    icon: Users,
+    color: "#3b82f6",
+    to: "/accounts",
+    ready: true,
+  },
+  { name: "Finance", icon: Wallet, color: "#059669", ready: false },
+  { name: "Reports", icon: BarChart3, color: "#c026d3", ready: false },
+];
 
-  const kpis: KpiCard[] = [
+const TRADING_MODULES: ModuleDef[] = [
+  {
+    name: "Trading Pipeline",
+    icon: TrendingUp,
+    color: "#0ea5e9",
+    to: "/trading",
+    ready: true,
+  },
+  {
+    name: "New Inquiry",
+    icon: ShoppingCart,
+    color: "#f59e0b",
+    to: "/trading/inquiry/new",
+    ready: true,
+  },
+  {
+    name: "Proforma Invoice",
+    icon: Receipt,
+    color: "#8b5cf6",
+    to: "/sales/proforma-invoice",
+    ready: true,
+  },
+  {
+    name: "Freight Shipments",
+    icon: Ship,
+    color: "#10b981",
+    to: "/freight",
+    ready: true,
+  },
+  {
+    name: "Account Management",
+    icon: Users,
+    color: "#3b82f6",
+    to: "/accounts",
+    ready: true,
+  },
+  { name: "Finance", icon: Wallet, color: "#059669", ready: false },
+  { name: "Reports", icon: BarChart3, color: "#c026d3", ready: false },
+];
+
+// ─── Page ────────────────────────────────────────────────────────
+export default function DashboardPage() {
+  const { isFreight } = useCompany();
+  const { user } = useAuth();
+  const { inquiries, deals } = useTradingStore();
+  const { shipments, inquiries: freightInquiries } = useFreightStore();
+
+  const firstName = user?.full_name?.split(" ")[0] ?? "there";
+
+  const freightKpis: KpiCard[] = [
     {
       label: "Total Shipments",
       value: shipments.length,
@@ -143,87 +174,16 @@ function FreightDashboard() {
     },
     {
       label: "Inquiries",
-      value: inquiries.length,
+      value: freightInquiries.length,
       icon: FileText,
       color: "text-amber-500",
       bg: "bg-amber-50",
     },
   ];
 
-  const modules: ModuleTileProps[] = [
+  const tradingKpis: KpiCard[] = [
     {
-      label: "Freight Operations",
-      description: "Manage shipments end-to-end",
-      icon: Ship,
-      color: "text-emerald-500",
-      iconBg: "bg-emerald-50",
-      to: "/freight",
-    },
-    {
-      label: "Packing List",
-      description: "Create cargo packing details",
-      icon: ClipboardList,
-      color: "text-blue-500",
-      iconBg: "bg-blue-50",
-      to: "/operations/packing-list",
-    },
-    {
-      label: "Bill of Lading",
-      description: "Sea freight title document",
-      icon: FileText,
-      color: "text-sky-500",
-      iconBg: "bg-sky-50",
-      to: "/operations/bill-of-lading",
-    },
-    {
-      label: "Account Management",
-      description: "Users, roles & permissions",
-      icon: Users,
-      color: "text-blue-500",
-      iconBg: "bg-blue-50",
-      to: "/accounts",
-    },
-    {
-      label: "Finance",
-      description: "Payments and P&L",
-      icon: Wallet,
-      color: "text-green-500",
-      iconBg: "bg-green-50",
-      soon: true,
-    },
-    {
-      label: "Reports",
-      description: "Analytics and exports",
-      icon: BarChart3,
-      color: "text-purple-500",
-      iconBg: "bg-purple-50",
-      soon: true,
-    },
-  ];
-
-  return (
-    <>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <KpiCard key={kpi.label} {...kpi} />
-        ))}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {modules.map((m) => (
-          <ModuleTile key={m.label} {...m} />
-        ))}
-      </div>
-    </>
-  );
-}
-
-// ─── Trading Dashboard ───────────────────────────────────────────
-function TradingDashboard() {
-  const { inquiries, deals } = useTradingStore();
-
-  const kpis: KpiCard[] = [
-    {
-      label: "Total Inquiries",
+      label: "Inquiries",
       value: inquiries.length,
       icon: ShoppingCart,
       color: "text-sky-500",
@@ -252,103 +212,35 @@ function TradingDashboard() {
     },
   ];
 
-  const modules: ModuleTileProps[] = [
-    {
-      label: "Trading Pipeline",
-      description: "Inquiries to deal confirmation",
-      icon: TrendingUp,
-      color: "text-sky-500",
-      iconBg: "bg-sky-50",
-      to: "/trading",
-    },
-    {
-      label: "New Inquiry",
-      description: "Start a new trading inquiry",
-      icon: ShoppingCart,
-      color: "text-amber-500",
-      iconBg: "bg-amber-50",
-      to: "/trading/inquiry/new",
-    },
-    {
-      label: "Proforma Invoice",
-      description: "Generate PI from quotation",
-      icon: Receipt,
-      color: "text-purple-500",
-      iconBg: "bg-purple-50",
-      to: "/sales/proforma-invoice",
-    },
-    {
-      label: "Freight Shipments",
-      description: "Shipments from trading deals",
-      icon: Ship,
-      color: "text-emerald-500",
-      iconBg: "bg-emerald-50",
-      to: "/freight",
-    },
-    {
-      label: "Account Management",
-      description: "Users, roles & permissions",
-      icon: Users,
-      color: "text-blue-500",
-      iconBg: "bg-blue-50",
-      to: "/accounts",
-    },
-    {
-      label: "Finance",
-      description: "Payments and P&L",
-      icon: Wallet,
-      color: "text-green-500",
-      iconBg: "bg-green-50",
-      soon: true,
-    },
-  ];
-
-  return (
-    <>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <KpiCard key={kpi.label} {...kpi} />
-        ))}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {modules.map((m) => (
-          <ModuleTile key={m.label} {...m} />
-        ))}
-      </div>
-    </>
-  );
-}
-
-// ─── Page ────────────────────────────────────────────────────────
-export default function DashboardPage() {
-  const { isFreight, activeCompany } = useCompany();
+  const modules = isFreight ? FREIGHT_MODULES : TRADING_MODULES;
+  const kpis = isFreight ? freightKpis : tradingKpis;
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div>
-          <div
-            className={`inline-flex items-center rounded-[8px] px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] ${
-              isFreight
-                ? "bg-emerald-50 text-emerald-600"
-                : "bg-sky-50 text-sky-600"
-            }`}
-          >
-            {activeCompany.name}
-          </div>
-          <h1 className="mt-1.5 text-[26px] font-bold tracking-[-0.04em] text-slate-900">
-            {isFreight
-              ? "Freight Forwarding Dashboard"
-              : "Trading Operations Dashboard"}
+      <div className="max-w-none">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-[20px] font-bold tracking-[-0.03em] text-slate-900">
+            Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-[14px] text-slate-500">
             {isFreight
-              ? "Overview of your freight operations, shipments and tracking."
-              : "Overview of your trading pipeline, deals and inquiries."}
+              ? "Freight forwarding operations, shipments and tracking."
+              : "Trading pipeline — inquiries, deals and freight coordination."}
           </p>
         </div>
 
-        {isFreight ? <FreightDashboard /> : <TradingDashboard />}
+        {/* KPI strip */}
+        <div className="mb-8">
+          <KpiStrip kpis={kpis} />
+        </div>
+
+        {/* Module tiles — same grid as original */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+          {modules.map((m) => (
+            <ModuleTile key={m.name} m={m} />
+          ))}
+        </div>
       </div>
     </AppLayout>
   );
