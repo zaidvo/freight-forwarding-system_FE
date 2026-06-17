@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useTradingStore } from "../store/tradingStore";
+import { useFreightStore } from "@/modules/freight/store/freightStore";
 import { StatusBadge } from "../components/StatusBadge";
 import { ShipmentDecisionDialog } from "../components/ShipmentDecisionDialog";
 import type { Deal } from "../types";
@@ -49,9 +50,20 @@ export default function TradingPage() {
     handleFreightDecision(decisionDeal.id, freightByUs);
     setDecisionDeal(null);
     if (freightByUs) {
-      // BE: will return freight shipment ID; navigate to freight module
-      // For now navigate to freight hub
-      navigate("/freight");
+      // Auto-create freight inquiry from the deal and navigate to freight quotation step
+      const destination =
+        inquiries.find((i) => i.id === decisionDeal.inquiryId)
+          ?.destinationCountry ?? "";
+      const { createInquiryFromDeal } = useFreightStore.getState();
+      const freightInquiry = createInquiryFromDeal({
+        customer: decisionDeal.customer,
+        product: decisionDeal.product,
+        quantity: decisionDeal.quantity,
+        origin: "Pakistan",
+        destination,
+        tradingDealId: decisionDeal.id,
+      });
+      navigate(`/freight/quotation/new?inquiryId=${freightInquiry.id}`);
     }
   };
 
@@ -203,7 +215,7 @@ export default function TradingPage() {
                               size="sm"
                               onClick={() =>
                                 navigate(
-                                  `/trading/quotation/new?inquiryId=${inq.id}`
+                                  `/trading/quotation/new?inquiryId=${inq.id}`,
                                 )
                               }
                             >
@@ -238,7 +250,7 @@ export default function TradingPage() {
                               size="sm"
                               onClick={() =>
                                 navigate(
-                                  `/trading/deal/new?inquiryId=${inq.id}`
+                                  `/trading/deal/new?inquiryId=${inq.id}`,
                                 )
                               }
                             >

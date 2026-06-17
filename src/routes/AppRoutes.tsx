@@ -33,17 +33,14 @@ import DealConfirmationPage from "@/modules/trading/pages/DealConfirmationPage";
 // Freight workflow
 import FreightPage from "@/modules/freight/pages/FreightPage";
 import FreightInquiryPage from "@/modules/freight/pages/FreightInquiryPage";
+import FreightQuotationPage from "@/modules/freight/pages/FreightQuotationPage";
+import FreightBookingPage from "@/modules/freight/pages/FreightBookingPage";
 import FreightShipmentFormPage from "@/modules/freight/pages/FreightShipmentFormPage";
 import ShipmentDetailPage from "@/modules/freight/pages/ShipmentDetailPage";
 
 export default function AppRoutes() {
   return (
     <BrowserRouter>
-      {/*
-        AuthProvider: session management (JWT)
-        CompanyProvider: active company state (freight / trading)
-        Both wrap all routes so every page has access.
-      */}
       <AuthProvider>
         <CompanyProvider>
           <Routes>
@@ -58,7 +55,7 @@ export default function AppRoutes() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/accounts" element={<AccountsPage />} />
 
-              {/* Operations standalone */}
+              {/* Operations */}
               <Route path="/operations" element={<OperationsPage />} />
               <Route
                 path="/operations/packing-list"
@@ -69,14 +66,14 @@ export default function AppRoutes() {
                 element={<BillOfLadingPage />}
               />
 
-              {/* Sales standalone */}
+              {/* Sales */}
               <Route path="/sales" element={<SalesPage />} />
               <Route
                 path="/sales/proforma-invoice"
                 element={<ProformaInvoicePage />}
               />
 
-              {/* Trading workflow */}
+              {/* Trading workflow — Step 1–6 */}
               <Route path="/trading" element={<TradingPage />} />
               <Route
                 path="/trading/inquiry/new"
@@ -91,20 +88,41 @@ export default function AppRoutes() {
                 element={<QuotationPage />}
               />
               <Route
+                path="/trading/quotation/:id"
+                element={<QuotationPage />}
+              />
+              <Route
                 path="/trading/pi/new"
                 element={<TradingProformaInvoicePage />}
               />
+              <Route
+                path="/trading/pi/:id"
+                element={<TradingProformaInvoicePage />}
+              />
               <Route path="/trading/po/new" element={<PurchaseOrderPage />} />
+              <Route path="/trading/po/:id" element={<PurchaseOrderPage />} />
               <Route
                 path="/trading/deal/new"
                 element={<DealConfirmationPage />}
               />
+              <Route
+                path="/trading/deal/:id"
+                element={<DealConfirmationPage />}
+              />
 
-              {/* Freight workflow */}
+              {/* Freight workflow — Step 1–9 */}
               <Route path="/freight" element={<FreightPage />} />
               <Route
                 path="/freight/inquiry/new"
                 element={<FreightInquiryPage />}
+              />
+              <Route
+                path="/freight/quotation/new"
+                element={<FreightQuotationPage />}
+              />
+              <Route
+                path="/freight/booking/new"
+                element={<FreightBookingPage />}
               />
               <Route
                 path="/freight/shipment/new"

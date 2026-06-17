@@ -15,6 +15,7 @@ import { WorkflowStepper } from "../components/WorkflowStepper";
 import { StatusBadge } from "../components/StatusBadge";
 import { ShipmentDecisionDialog } from "../components/ShipmentDecisionDialog";
 import { useTradingStore } from "../store/tradingStore";
+import { useFreightStore } from "@/modules/freight/store/freightStore";
 import { CheckCircle, XCircle, AlertTriangle, Clock, Ship } from "lucide-react";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -77,8 +78,17 @@ export default function DealConfirmationPage() {
     handleFreightDecision(deal.id, freightByUs);
     setShowDecision(false);
     if (freightByUs) {
-      // BE: auto-creates freight shipment draft, navigate to it
-      navigate("/freight");
+      // Auto-create freight inquiry from deal, navigate to freight quotation
+      const { createInquiryFromDeal } = useFreightStore.getState();
+      const freightInquiry = createInquiryFromDeal({
+        customer: deal.customer,
+        product: deal.product,
+        quantity: deal.quantity,
+        origin: inquiry?.destinationCountry ? "Pakistan" : "Pakistan",
+        destination: inquiry?.destinationCountry ?? "",
+        tradingDealId: deal.id,
+      });
+      navigate(`/freight/quotation/new?inquiryId=${freightInquiry.id}`);
     } else {
       navigate("/trading");
     }

@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   LogOut,
   Receipt,
+  Ship,
   ShoppingCart,
   TrendingUp,
   Users,
@@ -55,6 +56,8 @@ const FREIGHT_NAV: NavSection[] = [
   {
     title: "Operations",
     items: [
+      { label: "Freight Operations", to: "/freight", icon: Ship },
+      { label: "New Inquiry", to: "/freight/inquiry/new", icon: ClipboardList },
       {
         label: "Packing List",
         to: "/operations/packing-list",
@@ -144,6 +147,8 @@ const PAGE_LABELS: Record<string, string> = {
   "/trading/deal/new": "Deal Confirmation",
   "/freight": "Freight Operations",
   "/freight/inquiry/new": "New Freight Inquiry",
+  "/freight/quotation/new": "Freight Quotation",
+  "/freight/booking/new": "Booking",
   "/freight/shipment/new": "New Shipment",
 };
 
@@ -188,6 +193,9 @@ export function AppLayout({ children }: LayoutProps) {
       return "Shipment Detail";
     if (location.pathname.startsWith("/trading/inquiry/"))
       return "Inquiry Detail";
+    if (location.pathname.startsWith("/freight/quotation/"))
+      return "Freight Quotation";
+    if (location.pathname.startsWith("/freight/booking/")) return "Booking";
     return PAGE_LABELS[location.pathname] ?? "FreightOS";
   }, [location.pathname]);
 
