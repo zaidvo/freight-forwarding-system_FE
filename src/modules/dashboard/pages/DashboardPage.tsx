@@ -1,32 +1,23 @@
 // src/modules/dashboard/pages/DashboardPage.tsx
 //
-// Restores original ModuleTile grid style.
-// Company-aware: different modules + KPIs per company.
-// KPI row sits above the tile grid.
-//
-// BE integration:
-//   GET /api/v1/dashboard/stats → replace useTradingStore/useFreightStore counts
+// Dashboard shows fixed 5-tile module grid (Account Management, Operations,
+// Finance, Sales, Marketing) — same for both companies.
+// KPI strip above the tiles is company-aware.
 
-import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useCompany } from "@/providers/CompanyProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { useTradingStore } from "@/modules/trading/store/tradingStore";
 import { useFreightStore } from "@/modules/freight/store/freightStore";
 import { ModuleTile } from "../components/ModuleTile";
-import type { ModuleDef } from "../data/modules";
+import { MODULES } from "../data/modules";
 import {
   Ship,
-  Users,
-  TrendingUp,
   Package,
   FileText,
   HandshakeIcon,
   CheckCircle,
-  ClipboardList,
-  Receipt,
-  Wallet,
-  BarChart3,
+  TrendingUp,
   ShoppingCart,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -66,80 +57,6 @@ function KpiStrip({ kpis }: { kpis: KpiCard[] }) {
     </div>
   );
 }
-
-// ─── Module definitions per company ──────────────────────────────
-const FREIGHT_MODULES: ModuleDef[] = [
-  {
-    name: "Freight Operations",
-    icon: Ship,
-    color: "#10b981",
-    to: "/freight",
-    ready: true,
-  },
-  {
-    name: "Packing List",
-    icon: ClipboardList,
-    color: "#3b82f6",
-    to: "/operations/packing-list",
-    ready: true,
-  },
-  {
-    name: "Bill of Lading",
-    icon: FileText,
-    color: "#0ea5e9",
-    to: "/operations/bill-of-lading",
-    ready: true,
-  },
-  {
-    name: "Account Management",
-    icon: Users,
-    color: "#3b82f6",
-    to: "/accounts",
-    ready: true,
-  },
-  { name: "Finance", icon: Wallet, color: "#059669", ready: false },
-  { name: "Reports", icon: BarChart3, color: "#c026d3", ready: false },
-];
-
-const TRADING_MODULES: ModuleDef[] = [
-  {
-    name: "Trading Pipeline",
-    icon: TrendingUp,
-    color: "#0ea5e9",
-    to: "/trading",
-    ready: true,
-  },
-  {
-    name: "New Inquiry",
-    icon: ShoppingCart,
-    color: "#f59e0b",
-    to: "/trading/inquiry/new",
-    ready: true,
-  },
-  {
-    name: "Proforma Invoice",
-    icon: Receipt,
-    color: "#8b5cf6",
-    to: "/sales/proforma-invoice",
-    ready: true,
-  },
-  {
-    name: "Freight Shipments",
-    icon: Ship,
-    color: "#10b981",
-    to: "/freight",
-    ready: true,
-  },
-  {
-    name: "Account Management",
-    icon: Users,
-    color: "#3b82f6",
-    to: "/accounts",
-    ready: true,
-  },
-  { name: "Finance", icon: Wallet, color: "#059669", ready: false },
-  { name: "Reports", icon: BarChart3, color: "#c026d3", ready: false },
-];
 
 // ─── Page ────────────────────────────────────────────────────────
 export default function DashboardPage() {
@@ -212,7 +129,6 @@ export default function DashboardPage() {
     },
   ];
 
-  const modules = isFreight ? FREIGHT_MODULES : TRADING_MODULES;
   const kpis = isFreight ? freightKpis : tradingKpis;
 
   return (
@@ -224,9 +140,8 @@ export default function DashboardPage() {
             Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-[14px] text-slate-500">
-            {isFreight
-              ? "Freight forwarding operations, shipments and tracking."
-              : "Trading pipeline — inquiries, deals and freight coordination."}
+            Select one of the modules below. Only Account Management is active
+            in this build.
           </p>
         </div>
 
@@ -235,9 +150,9 @@ export default function DashboardPage() {
           <KpiStrip kpis={kpis} />
         </div>
 
-        {/* Module tiles — same grid as original */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-          {modules.map((m) => (
+        {/* Module tiles — fixed 5-tile grid matching the screenshot */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {MODULES.map((m) => (
             <ModuleTile key={m.name} m={m} />
           ))}
         </div>

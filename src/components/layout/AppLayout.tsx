@@ -1,8 +1,9 @@
 // src/components/layout/AppLayout.tsx
 //
 // Company-aware layout.
-// Company switcher lives in the top-left header area (next to logo).
-// Sidebar is collapsible with a clean arrow toggle pinned to its edge.
+// Sidebar sections match the 5 dashboard tiles: Main, Operations, Sales, Finance, Marketing.
+// Sub-items inside each section are company-specific.
+// Sidebar is collapsible with an arrow toggle pinned to its edge.
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -15,10 +16,10 @@ import {
   ChevronRight,
   ClipboardList,
   FileText,
+  HandshakeIcon,
   LayoutGrid,
   LogOut,
   Receipt,
-  Ship,
   ShoppingCart,
   TrendingUp,
   Users,
@@ -40,7 +41,9 @@ type NavItem = {
 };
 type NavSection = { title: string; items: NavItem[] };
 
-// ─── Nav sections per company ────────────────────────────────────
+// ─── Nav sections per company ─────────────────────────────────────────────────
+// Structure mirrors the dashboard tiles so users always know where they are.
+
 const FREIGHT_NAV: NavSection[] = [
   {
     title: "Main",
@@ -52,7 +55,6 @@ const FREIGHT_NAV: NavSection[] = [
   {
     title: "Operations",
     items: [
-      { label: "Freight Operations", to: "/freight", icon: Ship },
       {
         label: "Packing List",
         to: "/operations/packing-list",
@@ -66,12 +68,23 @@ const FREIGHT_NAV: NavSection[] = [
     ],
   },
   {
+    title: "Sales",
+    items: [
+      {
+        label: "Proforma Invoice",
+        to: "/sales/proforma-invoice",
+        icon: Receipt,
+      },
+      { label: "Sales Overview", icon: TrendingUp, soon: true },
+    ],
+  },
+  {
     title: "Finance",
     items: [{ label: "Finance", icon: Wallet, soon: true }],
   },
   {
-    title: "Reports",
-    items: [{ label: "Reports", icon: BarChart3, soon: true }],
+    title: "Marketing",
+    items: [{ label: "Marketing", icon: BarChart3, soon: true }],
   },
 ];
 
@@ -84,45 +97,57 @@ const TRADING_NAV: NavSection[] = [
     ],
   },
   {
-    title: "Trading",
+    title: "Operations",
     items: [
       { label: "Trading Pipeline", to: "/trading", icon: TrendingUp },
       { label: "New Inquiry", to: "/trading/inquiry/new", icon: ShoppingCart },
       {
-        label: "Proforma Invoice",
-        to: "/sales/proforma-invoice",
-        icon: Receipt,
+        label: "Deal Confirmation",
+        to: "/trading/deal/new",
+        icon: HandshakeIcon,
       },
     ],
   },
   {
-    title: "Freight (from Deals)",
-    items: [{ label: "Freight Shipments", to: "/freight", icon: Ship }],
+    title: "Sales",
+    items: [
+      { label: "Quotation", to: "/trading/quotation/new", icon: FileText },
+      { label: "Proforma Invoice", to: "/trading/pi/new", icon: Receipt },
+      { label: "Purchase Order", to: "/trading/po/new", icon: ShoppingCart },
+      { label: "Sales Overview", icon: TrendingUp, soon: true },
+    ],
   },
   {
     title: "Finance",
     items: [{ label: "Finance", icon: Wallet, soon: true }],
   },
+  {
+    title: "Marketing",
+    items: [{ label: "Marketing", icon: BarChart3, soon: true }],
+  },
 ];
 
-// ─── Page label map ──────────────────────────────────────────────
+// ─── Page label map ───────────────────────────────────────────────────────────
 const PAGE_LABELS: Record<string, string> = {
   "/": "Dashboard",
   "/accounts": "Account Management",
-  "/trading": "Trading Operations",
+  "/operations": "Operations",
+  "/operations/packing-list": "Packing List",
+  "/operations/bill-of-lading": "Bill of Lading",
+  "/sales": "Sales",
+  "/sales/proforma-invoice": "Proforma Invoice",
+  "/trading": "Trading Pipeline",
   "/trading/inquiry/new": "New Inquiry",
   "/trading/quotation/new": "New Quotation",
   "/trading/pi/new": "Proforma Invoice",
-  "/trading/po/new": "Record Purchase Order",
+  "/trading/po/new": "Purchase Order",
   "/trading/deal/new": "Deal Confirmation",
   "/freight": "Freight Operations",
   "/freight/inquiry/new": "New Freight Inquiry",
   "/freight/shipment/new": "New Shipment",
-  "/operations/packing-list": "Packing List",
-  "/operations/bill-of-lading": "Bill of Lading",
-  "/sales/proforma-invoice": "Proforma Invoice",
 };
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export function AppLayout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -142,7 +167,6 @@ export function AppLayout({ children }: LayoutProps) {
     );
   }, [collapsed]);
 
-  // Close company dropdown on outside click
   useEffect(() => {
     if (!companyOpen) return;
     const handler = (e: MouseEvent) => {
@@ -181,8 +205,20 @@ export function AppLayout({ children }: LayoutProps) {
     navigate("/login", { replace: true });
   };
 
+  // Determine active section for highlighting section header
+  const activeSectionTitle = useMemo(() => {
+    for (const section of navSections) {
+      if (
+        section.items.some((item) => item.to && location.pathname === item.to)
+      ) {
+        return section.title;
+      }
+    }
+    return null;
+  }, [location.pathname, navSections]);
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(79,124,255,0.08),_transparent_28%),linear-gradient(180deg,#fbfcff_0%,#f4f6fb_100%)] text-slate-900 lg:px-0 lg:py-0">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(79,124,255,0.08),_transparent_28%),linear-gradient(180deg,#fbfcff_0%,#f4f6fb_100%)] text-slate-900">
       <div className="flex min-h-screen overflow-hidden bg-white/60">
         {/* ── SIDEBAR ── */}
         <aside
@@ -190,7 +226,7 @@ export function AppLayout({ children }: LayoutProps) {
             collapsed ? "w-[68px]" : "w-[224px]"
           }`}
         >
-          {/* Logo area — used as anchor for collapse toggle */}
+          {/* Logo */}
           <div className="flex h-[60px] items-center gap-2.5 border-b border-slate-200/80 px-4">
             <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-blue-500 text-white shadow-[0_6px_16px_rgba(59,130,246,0.28)]">
               <LayoutGrid className="h-3.5 w-3.5" />
@@ -207,7 +243,14 @@ export function AppLayout({ children }: LayoutProps) {
             {navSections.map((section) => (
               <section key={section.title}>
                 {!collapsed && (
-                  <p className="mb-1 px-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-slate-400/80">
+                  <p
+                    className={[
+                      "mb-1 px-3 text-[10.5px] font-semibold uppercase tracking-[0.14em]",
+                      activeSectionTitle === section.title
+                        ? "text-blue-500"
+                        : "text-slate-400/80",
+                    ].join(" ")}
+                  >
                     {section.title}
                   </p>
                 )}
@@ -276,7 +319,6 @@ export function AppLayout({ children }: LayoutProps) {
           {/* User footer */}
           <div className="border-t border-slate-200/80 px-2 py-3">
             {collapsed ? (
-              /* Collapsed: just the avatar, centred */
               <div className="flex flex-col items-center gap-2">
                 <div
                   title={user?.full_name}
@@ -294,7 +336,6 @@ export function AppLayout({ children }: LayoutProps) {
                 </button>
               </div>
             ) : (
-              /* Expanded: full user row */
               <div className="flex items-center gap-2.5 rounded-[8px] px-2 py-2 hover:bg-slate-50 transition-colors">
                 <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-[12px] font-bold text-blue-600">
                   {avatarInitials}
@@ -319,7 +360,7 @@ export function AppLayout({ children }: LayoutProps) {
             )}
           </div>
 
-          {/* Collapse toggle — pinned to the right edge, vertically centred */}
+          {/* Collapse toggle */}
           <button
             type="button"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -338,7 +379,7 @@ export function AppLayout({ children }: LayoutProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Top header */}
           <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-slate-200/80 bg-white/90 px-5 backdrop-blur-xl">
-            {/* LEFT — company switcher */}
+            {/* Company switcher */}
             <div ref={companySwitcherRef} className="relative">
               <button
                 type="button"
@@ -355,9 +396,7 @@ export function AppLayout({ children }: LayoutProps) {
                 />
                 <span>{activeCompany.name}</span>
                 <ChevronDown
-                  className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-150 ${
-                    companyOpen ? "rotate-180" : ""
-                  }`}
+                  className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-150 ${companyOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
@@ -400,9 +439,8 @@ export function AppLayout({ children }: LayoutProps) {
               <span className="font-medium text-slate-600">{currentPage}</span>
             </div>
 
-            {/* RIGHT — actions */}
+            {/* Right actions */}
             <div className="ml-auto flex items-center gap-2">
-              {/* Notifications */}
               <button
                 type="button"
                 className="relative grid h-8 w-8 place-items-center rounded-[8px] border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
@@ -410,8 +448,6 @@ export function AppLayout({ children }: LayoutProps) {
                 <Bell className="h-4 w-4" />
                 <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full border-[1.5px] border-white bg-emerald-500" />
               </button>
-
-              {/* Avatar */}
               <div
                 title={user?.full_name}
                 className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-sky-100 to-sky-200 text-[12px] font-bold text-sky-600 cursor-default select-none"
