@@ -116,6 +116,7 @@ function GroupCard({
   onError: (error: string | null) => void;
 }) {
   const [name, setName] = useState(group.name);
+  const [savingModules, setSavingModules] = useState(false);
 
   return (
     <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
@@ -157,13 +158,17 @@ function GroupCard({
         <ModulePicker
           modules={modules}
           selectedIds={group.modules}
+          disabled={savingModules}
           onToggle={async (moduleId) => {
+            setSavingModules(true);
             try {
               await onToggleModule(group.id, moduleId);
             } catch (err) {
               onError(
                 err instanceof Error ? err.message : "Unable to update modules.",
               );
+            } finally {
+              setSavingModules(false);
             }
           }}
         />
@@ -191,10 +196,12 @@ function GroupCard({
 function ModulePicker({
   modules,
   selectedIds,
+  disabled,
   onToggle,
 }: {
   modules: AppModule[];
   selectedIds: number[];
+  disabled: boolean;
   onToggle: (moduleId: number) => void;
 }) {
   return (
@@ -208,6 +215,7 @@ function ModulePicker({
           >
             <Checkbox
               checked={active}
+              disabled={disabled}
               onChange={() => onToggle(module.id)}
               className="mt-0.5"
             />
