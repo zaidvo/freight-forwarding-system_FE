@@ -107,7 +107,7 @@ export default function ShipmentDetailPage() {
   const handleUpload = (doc: FreightDocument) => {
     // BE: POST /api/v1/documents/upload with FormData
     // For now simulate with a placeholder URL
-    const fakeUrl = `#uploaded-${doc.type}-${Date.now()}`;
+    const fakeUrl = `#uploaded-${doc.type}-${doc.id}`;
     uploadDocument(shipment.id, doc.type, fakeUrl);
   };
 

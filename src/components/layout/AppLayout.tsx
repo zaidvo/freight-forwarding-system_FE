@@ -38,6 +38,7 @@ type NavItem = {
   label: string;
   to?: string;
   icon: typeof LayoutGrid;
+  moduleSlug?: string;
   soon?: boolean;
 };
 type NavSection = { title: string; items: NavItem[] };
@@ -50,23 +51,40 @@ const FREIGHT_NAV: NavSection[] = [
     title: "Main",
     items: [
       { label: "Dashboard", to: "/", icon: LayoutGrid },
-      { label: "Account Management", to: "/accounts", icon: Users },
+      {
+        label: "Account Management",
+        to: "/accounts",
+        icon: Users,
+        moduleSlug: "account-management",
+      },
     ],
   },
   {
     title: "Operations",
     items: [
-      { label: "Freight Operations", to: "/freight", icon: Ship },
-      { label: "New Inquiry", to: "/freight/inquiry/new", icon: ClipboardList },
+      {
+        label: "Freight Operations",
+        to: "/freight",
+        icon: Ship,
+        moduleSlug: "operations",
+      },
+      {
+        label: "New Inquiry",
+        to: "/freight/inquiry/new",
+        icon: ClipboardList,
+        moduleSlug: "operations",
+      },
       {
         label: "Packing List",
         to: "/operations/packing-list",
         icon: ClipboardList,
+        moduleSlug: "operations",
       },
       {
         label: "Bill of Lading",
         to: "/operations/bill-of-lading",
         icon: FileText,
+        moduleSlug: "operations",
       },
     ],
   },
@@ -77,17 +95,32 @@ const FREIGHT_NAV: NavSection[] = [
         label: "Proforma Invoice",
         to: "/sales/proforma-invoice",
         icon: Receipt,
+        moduleSlug: "sales",
       },
-      { label: "Sales Overview", icon: TrendingUp, soon: true },
+      {
+        label: "Sales Overview",
+        icon: TrendingUp,
+        moduleSlug: "sales",
+        soon: true,
+      },
     ],
   },
   {
     title: "Finance",
-    items: [{ label: "Finance", icon: Wallet, soon: true }],
+    items: [
+      { label: "Finance", icon: Wallet, moduleSlug: "finance", soon: true },
+    ],
   },
   {
     title: "Marketing",
-    items: [{ label: "Marketing", icon: BarChart3, soon: true }],
+    items: [
+      {
+        label: "Marketing",
+        icon: BarChart3,
+        moduleSlug: "marketing",
+        soon: true,
+      },
+    ],
   },
 ];
 
@@ -96,37 +129,82 @@ const TRADING_NAV: NavSection[] = [
     title: "Main",
     items: [
       { label: "Dashboard", to: "/", icon: LayoutGrid },
-      { label: "Account Management", to: "/accounts", icon: Users },
+      {
+        label: "Account Management",
+        to: "/accounts",
+        icon: Users,
+        moduleSlug: "account-management",
+      },
     ],
   },
   {
     title: "Operations",
     items: [
-      { label: "Trading Pipeline", to: "/trading", icon: TrendingUp },
-      { label: "New Inquiry", to: "/trading/inquiry/new", icon: ShoppingCart },
+      {
+        label: "Trading Pipeline",
+        to: "/trading",
+        icon: TrendingUp,
+        moduleSlug: "operations",
+      },
+      {
+        label: "New Inquiry",
+        to: "/trading/inquiry/new",
+        icon: ShoppingCart,
+        moduleSlug: "operations",
+      },
       {
         label: "Deal Confirmation",
         to: "/trading/deal/new",
         icon: HandshakeIcon,
+        moduleSlug: "operations",
       },
     ],
   },
   {
     title: "Sales",
     items: [
-      { label: "Quotation", to: "/trading/quotation/new", icon: FileText },
-      { label: "Proforma Invoice", to: "/trading/pi/new", icon: Receipt },
-      { label: "Purchase Order", to: "/trading/po/new", icon: ShoppingCart },
-      { label: "Sales Overview", icon: TrendingUp, soon: true },
+      {
+        label: "Quotation",
+        to: "/trading/quotation/new",
+        icon: FileText,
+        moduleSlug: "sales",
+      },
+      {
+        label: "Proforma Invoice",
+        to: "/trading/pi/new",
+        icon: Receipt,
+        moduleSlug: "sales",
+      },
+      {
+        label: "Purchase Order",
+        to: "/trading/po/new",
+        icon: ShoppingCart,
+        moduleSlug: "sales",
+      },
+      {
+        label: "Sales Overview",
+        icon: TrendingUp,
+        moduleSlug: "sales",
+        soon: true,
+      },
     ],
   },
   {
     title: "Finance",
-    items: [{ label: "Finance", icon: Wallet, soon: true }],
+    items: [
+      { label: "Finance", icon: Wallet, moduleSlug: "finance", soon: true },
+    ],
   },
   {
     title: "Marketing",
-    items: [{ label: "Marketing", icon: BarChart3, soon: true }],
+    items: [
+      {
+        label: "Marketing",
+        icon: BarChart3,
+        moduleSlug: "marketing",
+        soon: true,
+      },
+    ],
   },
 ];
 
@@ -156,7 +234,7 @@ const PAGE_LABELS: Record<string, string> = {
 export function AppLayout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, hasModuleAccess } = useAuth();
   const { activeCompany, setActiveCompanyId, isFreight } = useCompany();
 
   const [collapsed, setCollapsed] = useState(
@@ -186,7 +264,19 @@ export function AppLayout({ children }: LayoutProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [companyOpen]);
 
-  const navSections = isFreight ? FREIGHT_NAV : TRADING_NAV;
+  const baseNavSections = isFreight ? FREIGHT_NAV : TRADING_NAV;
+  const navSections = useMemo(
+    () =>
+      baseNavSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter(
+            (item) => !item.moduleSlug || hasModuleAccess(item.moduleSlug),
+          ),
+        }))
+        .filter((section) => section.items.length > 0),
+    [baseNavSections, hasModuleAccess],
+  );
 
   const currentPage = useMemo(() => {
     if (location.pathname.startsWith("/freight/shipment/"))

@@ -25,6 +25,8 @@ export default function PermissionsDialog({
 
   useEffect(() => {
     if (open && user) {
+      // Sync checked groups with the selected user when the dialog opens.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedGroups(user.groups);
       setError(null);
       setSaving(false);

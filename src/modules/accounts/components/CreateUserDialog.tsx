@@ -31,6 +31,8 @@ export default function CreateUserDialog({
 
   useEffect(() => {
     if (open) {
+      // Reset form state every time the create dialog is opened.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraft(emptyDraft);
       setError(null);
       setSaving(false);

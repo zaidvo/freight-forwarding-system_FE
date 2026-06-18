@@ -61,7 +61,7 @@ function KpiStrip({ kpis }: { kpis: KpiCard[] }) {
 // ─── Page ────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { isFreight } = useCompany();
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
   const { inquiries, deals } = useTradingStore();
   const { shipments, inquiries: freightInquiries } = useFreightStore();
 
@@ -130,6 +130,9 @@ export default function DashboardPage() {
   ];
 
   const kpis = isFreight ? freightKpis : tradingKpis;
+  const visibleModules = MODULES.filter((module) =>
+    hasModuleAccess(module.slug),
+  );
 
   return (
     <AppLayout>
@@ -140,8 +143,7 @@ export default function DashboardPage() {
             Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-[14px] text-slate-500">
-            Select one of the modules below. Only Account Management is active
-            in this build.
+            Select one of your available modules below.
           </p>
         </div>
 
@@ -152,10 +154,15 @@ export default function DashboardPage() {
 
         {/* Module tiles — fixed 5-tile grid matching the screenshot */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {MODULES.map((m) => (
+          {visibleModules.map((m) => (
             <ModuleTile key={m.name} m={m} />
           ))}
         </div>
+        {visibleModules.length === 0 && (
+          <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-8 text-sm text-slate-500 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+            No modules are assigned to your account.
+          </div>
+        )}
       </div>
     </AppLayout>
   );

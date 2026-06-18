@@ -8,6 +8,8 @@ type UsersTableProps = {
   onEdit: (u: User) => void;
   onGroups: (u: User) => void;
   onDelete: (u: User) => void;
+  canManageUsers: boolean;
+  canManageGroups: boolean;
 };
 
 export function UsersTable({
@@ -15,6 +17,8 @@ export function UsersTable({
   onEdit,
   onGroups,
   onDelete,
+  canManageUsers,
+  canManageGroups,
 }: UsersTableProps) {
   return (
     <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
@@ -72,7 +76,7 @@ export function UsersTable({
                 <td className="px-4 py-4 text-slate-500">{user.lastActive}</td>
                 <td className="px-4 py-4">
                   <div className="flex justify-end gap-1.5">
-                    {user.role !== "root" ? (
+                    {canManageUsers && user.role !== "root" ? (
                       <>
                         <Button
                           variant="ghost"
@@ -82,26 +86,28 @@ export function UsersTable({
                           <PencilLine className="h-3.5 w-3.5" />
                           Edit
                         </Button>
+                        {canManageGroups && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onGroups(user)}
+                          >
+                            <Layers3 className="h-3.5 w-3.5" />
+                            Groups
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onGroups(user)}
+                          onClick={() => onDelete(user)}
                         >
-                          <Layers3 className="h-3.5 w-3.5" />
-                          Groups
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
                         </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(user)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </Button>
                       </>
                     ) : (
                       <span className="text-[12px] font-semibold text-slate-400">
-                        Protected
+                        {user.role === "root" ? "Protected" : "View only"}
                       </span>
                     )}
                   </div>

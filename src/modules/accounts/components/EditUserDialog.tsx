@@ -27,6 +27,8 @@ export default function EditUserDialog({
 
   useEffect(() => {
     if (open && user) {
+      // Sync the edit form with the selected user when the dialog opens.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraft({
         full_name: user.full_name,
         email: user.email,

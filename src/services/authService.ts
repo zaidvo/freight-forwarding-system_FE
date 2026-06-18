@@ -9,6 +9,9 @@ import {
 
 // Re-export as AuthUser so AuthProvider can import it
 export type AuthUser = BackendUser;
+export type AuthAccess = {
+  modules: string[];
+};
 
 // ─── Token helpers ───────────────────────────────────────────────
 const TOKEN_KEY = "freighterp_access_token";
@@ -51,6 +54,10 @@ export async function getMe(): Promise<AuthUser | null> {
     clearAuthToken();
     return null;
   }
+}
+
+export async function getMyAccess(): Promise<AuthAccess> {
+  return apiRequest<AuthAccess>("/auth/me/access");
 }
 
 // ─── logout ──────────────────────────────────────────────────────

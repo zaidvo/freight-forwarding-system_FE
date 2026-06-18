@@ -23,6 +23,10 @@ import { ProformaInvoicePreview } from "@/modules/sales/components/ProformaInvoi
 import type { ProformaInvoiceForm } from "@/modules/sales/types";
 import { EMPTY_PROFORMA } from "@/modules/sales/data/seed";
 
+const DEFAULT_PI_NUMBER = `PI-${new Date().getFullYear()}-${String(
+  Math.floor(Math.random() * 900) + 100,
+)}`;
+
 export default function TradingProformaInvoicePage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -35,9 +39,7 @@ export default function TradingProformaInvoicePage() {
   // Pre-fill form from inquiry + quotation data
   const [form, setForm] = useState<ProformaInvoiceForm>({
     ...EMPTY_PROFORMA,
-    piNumber: `PI-${new Date().getFullYear()}-${String(
-      Math.floor(Math.random() * 900) + 100
-    )}`,
+    piNumber: DEFAULT_PI_NUMBER,
     buyerName: inquiry?.buyer ?? "",
     buyerAddress: "",
     buyerContact: inquiry?.email ?? "",

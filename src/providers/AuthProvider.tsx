@@ -1,4 +1,5 @@
 // src/providers/AuthProvider.tsx
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useCallback,
@@ -11,6 +12,7 @@ import {
   login as apiLogin,
   logout as apiLogout,
   getMe,
+  getMyAccess,
   isTokenExpired,
   type AuthUser,
 } from "@/services/authService";
@@ -24,8 +26,10 @@ type AuthState =
 type AuthContextValue = {
   state: AuthState;
   user: AuthUser | null;
+  moduleAccess: string[];
   isLoading: boolean;
   isAuthenticated: boolean;
+  hasModuleAccess: (moduleSlug: string) => boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -35,6 +39,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // ─── Provider ────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: "loading" });
+  const [moduleAccess, setModuleAccess] = useState<string[]>([]);
 
   // On mount: verify existing token with backend
   useEffect(() => {
@@ -52,8 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
 
       if (user && user.status === "active") {
+        const access = await getMyAccess().catch(() => ({ modules: [] }));
+        if (cancelled) return;
+        setModuleAccess(access.modules);
         setState({ status: "authenticated", user });
       } else {
+        setModuleAccess([]);
         setState({ status: "unauthenticated" });
       }
     }
@@ -70,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const interval = setInterval(() => {
       if (isTokenExpired()) {
+        setModuleAccess([]);
         setState({ status: "unauthenticated" });
       }
     }, 30_000);
@@ -86,19 +96,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
 
+    const access = await getMyAccess().catch(() => ({ modules: [] }));
+    setModuleAccess(access.modules);
     setState({ status: "authenticated", user });
   }, []);
 
   const logout = useCallback(async () => {
     await apiLogout();
+    setModuleAccess([]);
     setState({ status: "unauthenticated" });
   }, []);
+
+  const hasModuleAccess = useCallback(
+    (moduleSlug: string) => moduleAccess.includes(moduleSlug),
+    [moduleAccess],
+  );
 
   const value: AuthContextValue = {
     state,
     user: state.status === "authenticated" ? state.user : null,
+    moduleAccess,
     isLoading: state.status === "loading",
     isAuthenticated: state.status === "authenticated",
+    hasModuleAccess,
     login,
     logout,
   };

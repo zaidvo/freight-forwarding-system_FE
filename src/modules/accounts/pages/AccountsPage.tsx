@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   Clock3,
   Download,
@@ -47,6 +48,8 @@ import {
 } from "@/services/groupService";
 
 export default function AccountsPage() {
+  const { user: currentUser } = useAuth();
+  const isRoot = currentUser?.role === "root";
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [modules, setModules] = useState<AppModule[]>([]);
@@ -99,6 +102,13 @@ export default function AccountsPage() {
     let active = true;
 
     async function loadAccessData() {
+      if (!isRoot) {
+        setGroups([]);
+        setModules([]);
+        setGroupsLoading(false);
+        return;
+      }
+
       setGroupsLoading(true);
       try {
         const [moduleData, groupData] = await Promise.all([
@@ -127,7 +137,7 @@ export default function AccountsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isRoot]);
 
   const groupsById = useMemo(
     () => new Map(groups.map((group) => [group.id, group])),
@@ -166,6 +176,7 @@ export default function AccountsPage() {
     }),
     [groups.length, users],
   );
+  const visibleTab = !isRoot && activeTab === "groups" ? "users" : activeTab;
 
   const appendAudit = (
     action: AuditAction,
@@ -397,10 +408,12 @@ export default function AccountsPage() {
               <Download className="h-4 w-4" />
               Export
             </Button>
-            <Button onClick={() => setCreateOpen(true)}>
-              <UserPlus className="h-4 w-4" />
-              New User
-            </Button>
+            {isRoot && (
+              <Button onClick={() => setCreateOpen(true)}>
+                <UserPlus className="h-4 w-4" />
+                New User
+              </Button>
+            )}
           </div>
         </div>
 
@@ -408,7 +421,7 @@ export default function AccountsPage() {
           {(
             [
               ["users", "Users"],
-              ["groups", "Groups"],
+              ...(isRoot ? ([["groups", "Groups"]] as const) : []),
               ["audit", "Audit Log"],
             ] as const
           ).map(([key, label]) => (
@@ -416,14 +429,14 @@ export default function AccountsPage() {
               key={key}
               type="button"
               onClick={() => setActiveTab(key)}
-              className={`rounded-[12px] px-4 py-2.5 text-[14px] font-semibold transition ${activeTab === key ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
+              className={`rounded-[12px] px-4 py-2.5 text-[14px] font-semibold transition ${visibleTab === key ? "bg-blue-50 text-blue-600" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
             >
               {label}
             </button>
           ))}
         </div>
 
-        {activeTab === "users" && (
+        {visibleTab === "users" && (
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <StatCard
@@ -494,12 +507,14 @@ export default function AccountsPage() {
                 onEdit={setEditingUser}
                 onGroups={setGroupUser}
                 onDelete={setDeletingUser}
+                canManageUsers={isRoot}
+                canManageGroups={isRoot}
               />
             )}
           </div>
         )}
 
-        {activeTab === "groups" && (
+        {isRoot && visibleTab === "groups" && (
           groupsLoading ? (
             <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
               Loading groups...
@@ -517,29 +532,29 @@ export default function AccountsPage() {
           )
         )}
 
-        {activeTab === "audit" && <AuditLogTable logs={auditLogs} />}
+        {visibleTab === "audit" && <AuditLogTable logs={auditLogs} />}
       </div>
 
       <CreateUserDialog
-        open={createOpen}
+        open={isRoot && createOpen}
         onClose={() => setCreateOpen(false)}
         onCreate={handleCreateUser}
       />
       <EditUserDialog
-        open={Boolean(editingUser)}
+        open={isRoot && Boolean(editingUser)}
         user={editingUser}
         onClose={() => setEditingUser(null)}
         onSave={handleSaveUser}
       />
       <PermissionsDialog
-        open={Boolean(groupUser)}
+        open={isRoot && Boolean(groupUser)}
         user={groupUser}
         groups={groups}
         onClose={() => setGroupUser(null)}
         onSave={handleSaveGroups}
       />
       <DeleteUserDialog
-        open={Boolean(deletingUser)}
+        open={isRoot && Boolean(deletingUser)}
         user={deletingUser}
         onClose={() => setDeletingUser(null)}
         onConfirm={handleDeleteUser}

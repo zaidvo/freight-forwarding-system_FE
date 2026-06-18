@@ -1,4 +1,5 @@
 // src/providers/CompanyProvider.tsx
+/* eslint-disable react-refresh/only-export-components */
 //
 // Lifts active company state into React context so any component
 // (sidebar, dashboard, pages) can read and react to company switches.

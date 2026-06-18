@@ -9,6 +9,7 @@ import {
 
 export type ModuleDef = {
   name: string;
+  slug: string;
   icon: LucideIcon;
   color: string;
   to?: string;
@@ -21,6 +22,7 @@ export type ModuleDef = {
 export const MODULES: ModuleDef[] = [
   {
     name: "Account Management",
+    slug: "account-management",
     icon: Users,
     color: "#3b82f6",
     to: "/accounts",
@@ -28,18 +30,20 @@ export const MODULES: ModuleDef[] = [
   },
   {
     name: "Operations",
+    slug: "operations",
     icon: Ship,
     color: "#0ea5e9",
     to: "/operations",
     ready: true,
   },
-  { name: "Finance", icon: Wallet, color: "#059669" },
+  { name: "Finance", slug: "finance", icon: Wallet, color: "#059669" },
   {
     name: "Sales",
+    slug: "sales",
     icon: ShoppingCart,
     color: "#f59e0b",
     to: "/sales",
     ready: true,
   },
-  { name: "Marketing", icon: BarChart3, color: "#c026d3" },
+  { name: "Marketing", slug: "marketing", icon: BarChart3, color: "#c026d3" },
 ];

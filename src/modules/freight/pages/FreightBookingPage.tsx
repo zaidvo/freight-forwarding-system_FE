@@ -56,6 +56,10 @@ type FormData = {
   bookingReference: string;
 };
 
+const DEFAULT_BOOKING_SCHEDULE = new Date(Date.now() + 7 * 86400000)
+  .toISOString()
+  .split("T")[0];
+
 export default function FreightBookingPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -68,7 +72,7 @@ export default function FreightBookingPage() {
     carrier: "",
     vesselFlight: "",
     voyageNumber: "",
-    schedule: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
+    schedule: DEFAULT_BOOKING_SCHEDULE,
     bookingReference: "",
   });
   const [saving, setSaving] = useState(false);
