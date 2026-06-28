@@ -1,8 +1,8 @@
 // src/modules/sales/components/ProformaInvoiceForm.tsx
 import { useCallback } from "react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
+import { Button } from "@/shared/components/ui/Button";
+import { Input } from "@/shared/components/ui/Input";
+import { Label } from "@/shared/components/ui/Label";
 import { Plus, Trash2 } from "lucide-react";
 import type {
   ProformaInvoiceForm as ProformaInvoiceFormType,

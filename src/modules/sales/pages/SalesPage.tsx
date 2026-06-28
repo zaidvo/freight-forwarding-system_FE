@@ -6,8 +6,8 @@
 // Import / Export     → Quotation, Proforma Invoice, Purchase Order, Sales Overview (soon)
 
 import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { useCompany } from "@/providers/CompanyProvider";
+import { AppLayout } from "@/app/layout/AppLayout";
+import { useCompany } from "@/app/providers/CompanyProvider";
 import { Receipt, TrendingUp, FileText, ShoppingCart } from "lucide-react";
 
 type SaleMod = {

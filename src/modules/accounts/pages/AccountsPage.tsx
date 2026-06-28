@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
-import { useAuth } from "@/providers/AuthProvider";
+import { AppLayout } from "@/app/layout/AppLayout";
+import { Button } from "@/shared/components/ui/Button";
+import { Input } from "@/shared/components/ui/Input";
+import { Select } from "@/shared/components/ui/Select";
+import { useAuth } from "@/app/providers/AuthProvider";
 import {
   Clock3,
   Download,
@@ -36,16 +36,16 @@ import {
   deactivateUser,
   listUsers,
   updateUser,
-} from "@/services/userService";
-import type { BackendGroup, BackendModule, BackendUser } from "@/services/api";
-import { listModules } from "@/services/moduleService";
+} from "@/shared/services/userService";
+import type { BackendGroup, BackendModule, BackendUser } from "@/shared/services/api";
+import { listModules } from "@/shared/services/moduleService";
 import {
   createGroup,
   deleteGroup,
   listGroups,
   updateGroup,
   updateUserGroups,
-} from "@/services/groupService";
+} from "@/shared/services/groupService";
 
 export default function AccountsPage() {
   const { user: currentUser } = useAuth();

@@ -1,7 +1,7 @@
 // src/modules/operations/components/BillOfLadingForm.tsx
 import { useCallback } from "react";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
+import { Input } from "@/shared/components/ui/Input";
+import { Label } from "@/shared/components/ui/Label";
 import type { BillOfLadingForm as BillOfLadingFormType } from "../types";
 import { CONTAINER_TYPES } from "../data/seed";
 

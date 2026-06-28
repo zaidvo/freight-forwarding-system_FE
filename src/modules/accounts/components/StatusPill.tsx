@@ -1,5 +1,5 @@
 import type { UserStatus } from "../types";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 
 const MAP: Record<UserStatus, string> = {
   active: "bg-emerald-50 text-emerald-700 ring-emerald-200",

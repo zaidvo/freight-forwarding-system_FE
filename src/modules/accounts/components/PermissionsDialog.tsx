@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Checkbox";
-import { Dialog } from "@/components/ui/Dialog";
+import { Button } from "@/shared/components/ui/Button";
+import { Checkbox } from "@/shared/components/ui/Checkbox";
+import { Dialog } from "@/shared/components/ui/Dialog";
 import type { Group, User } from "../types";
 
 type PermissionsDialogProps = {

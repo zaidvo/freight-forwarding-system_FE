@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
+import { Button } from "@/shared/components/ui/Button";
+import { Dialog } from "@/shared/components/ui/Dialog";
+import { Input } from "@/shared/components/ui/Input";
+import { Label } from "@/shared/components/ui/Label";
 import { Eye, EyeOff } from "lucide-react";
 import type { UserInput } from "../types";
 
