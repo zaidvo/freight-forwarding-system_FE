@@ -1,7 +1,8 @@
 // src/modules/freight/pages/FreightBookingPage.tsx
 // Step 3 — Booking
-// Auto-fills from inquiry data (origin, destination, customer).
-// Navigates to Shipment Creation (Step 4) on confirm booking.
+//
+// V2: Blocks confirmation if no freight quotation has been issued for this inquiry.
+// V7: Field-level red highlighting on required fields.
 //
 // BE: POST /api/v1/freight/bookings
 
@@ -11,9 +12,11 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { useFreightStore } from "../store/freightStore";
-import { ArrowRight } from "lucide-react";
+import { validateBookingForm, type BookingFormErrors } from "../lib/validation";
 
+// ─── Sub-components ───────────────────────────────────────────────
 function SectionCard({
   title,
   children,
@@ -31,11 +34,13 @@ function SectionCard({
   );
 }
 
-function Field({
+function FieldWrapper({
   label,
+  error,
   children,
 }: {
   label: string;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -44,6 +49,9 @@ function Field({
         {label}
       </Label>
       {children}
+      {error && (
+        <p className="mt-1 text-[11px] font-medium text-rose-500">{error}</p>
+      )}
     </div>
   );
 }
@@ -56,13 +64,17 @@ type FormData = {
   bookingReference: string;
 };
 
+// ─── Page ─────────────────────────────────────────────────────────
 export default function FreightBookingPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const inquiryId = params.get("inquiryId") ?? "";
 
-  const { inquiries, createBooking } = useFreightStore();
+  const { inquiries, quotations, createBooking } = useFreightStore();
   const inquiry = inquiries.find((i) => i.id === inquiryId);
+
+  // V2: check for an approved quotation for this inquiry
+  const hasQuotation = quotations.some((q) => q.inquiryId === inquiryId);
 
   const [form, setForm] = useState<FormData>({
     carrier: "",
@@ -71,18 +83,22 @@ export default function FreightBookingPage() {
     schedule: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0],
     bookingReference: "",
   });
+  const [errors, setErrors] = useState<BookingFormErrors>({});
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const set = <K extends keyof FormData>(k: K, v: FormData[K]) =>
+  const set = <K extends keyof FormData>(k: K, v: FormData[K]) => {
     setForm((f) => ({ ...f, [k]: v }));
+    if (errors[k as keyof BookingFormErrors]) {
+      setErrors((e) => ({ ...e, [k]: undefined }));
+    }
+  };
 
   const handleConfirm = () => {
-    if (!form.carrier || !form.bookingReference) {
-      setError("Carrier and Booking Reference are required.");
+    const validationErrors = validateBookingForm(form);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
-    setError(null);
     setSaving(true);
     try {
       createBooking({ inquiryId, ...form });
@@ -117,12 +133,42 @@ export default function FreightBookingPage() {
             <Button variant="secondary" onClick={() => navigate("/freight")}>
               Back
             </Button>
-            <Button onClick={handleConfirm} disabled={saving}>
+            {/* V2: disabled when no quotation exists */}
+            <Button
+              onClick={handleConfirm}
+              disabled={saving || !hasQuotation}
+              title={
+                !hasQuotation
+                  ? "A freight quotation must be issued first."
+                  : undefined
+              }
+            >
               {saving ? "Confirming..." : "Confirm Booking"}{" "}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
+
+        {/* V2: Missing quotation warning */}
+        {!hasQuotation && (
+          <div className="flex items-start gap-3 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+            <div>
+              <span className="font-semibold">No quotation found.</span> A
+              freight quotation must be issued for this inquiry before booking
+              can be confirmed.{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/freight/quotation/new?inquiryId=${inquiryId}`)
+                }
+                className="font-semibold text-amber-700 underline hover:text-amber-900"
+              >
+                Create quotation →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Inquiry summary */}
         {inquiry && (
@@ -132,56 +178,64 @@ export default function FreightBookingPage() {
           </div>
         )}
 
-        {error && (
-          <div className="rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
-            {error}
-          </div>
-        )}
-
         <SectionCard title="Carrier & Vessel">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Carrier *">
+            <FieldWrapper label="Carrier *" error={errors.carrier}>
               <Input
                 value={form.carrier}
                 onChange={(e) => set("carrier", e.target.value)}
                 placeholder="MSC Lines"
-                className="w-full"
+                className={`w-full ${errors.carrier ? "border-rose-400 ring-2 ring-rose-100 focus:border-rose-400 focus:ring-rose-100" : ""}`}
               />
-            </Field>
-            <Field label="Booking Reference *">
+            </FieldWrapper>
+
+            <FieldWrapper
+              label="Booking Reference *"
+              error={errors.bookingReference}
+            >
               <Input
                 value={form.bookingReference}
                 onChange={(e) => set("bookingReference", e.target.value)}
                 placeholder="MSC123456789"
-                className="w-full"
+                className={`w-full ${errors.bookingReference ? "border-rose-400 ring-2 ring-rose-100 focus:border-rose-400 focus:ring-rose-100" : ""}`}
               />
-            </Field>
-            <Field
-              label={inquiry?.mode === "Air" ? "Flight No." : "Vessel Name"}
-            >
+            </FieldWrapper>
+
+            <div>
+              <Label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                {inquiry?.mode === "Air" ? "Flight No." : "Vessel Name"}
+              </Label>
               <Input
                 value={form.vesselFlight}
                 onChange={(e) => set("vesselFlight", e.target.value)}
                 placeholder={inquiry?.mode === "Air" ? "PK-204" : "MSC Danit"}
                 className="w-full"
               />
-            </Field>
-            <Field label="Voyage / Flight Number">
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Voyage / Flight Number
+              </Label>
               <Input
                 value={form.voyageNumber}
                 onChange={(e) => set("voyageNumber", e.target.value)}
                 placeholder="2025-WE-01"
                 className="w-full"
               />
-            </Field>
-            <Field label="Scheduled Departure">
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Scheduled Departure
+              </Label>
               <Input
                 type="date"
                 value={form.schedule}
                 onChange={(e) => set("schedule", e.target.value)}
                 className="w-full"
               />
-            </Field>
+            </div>
           </div>
         </SectionCard>
       </div>

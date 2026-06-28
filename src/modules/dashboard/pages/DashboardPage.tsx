@@ -10,7 +10,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useTradingStore } from "@/modules/trading/store/tradingStore";
 import { useFreightStore } from "@/modules/freight/store/freightStore";
 import { ModuleTile } from "../components/ModuleTile";
-import { MODULES } from "../data/modules";
+import { FREIGHT_MODULES, TRADING_MODULES } from "../data/modules";
 import {
   Ship,
   Package,
@@ -130,6 +130,7 @@ export default function DashboardPage() {
   ];
 
   const kpis = isFreight ? freightKpis : tradingKpis;
+  const modules = isFreight ? FREIGHT_MODULES : TRADING_MODULES;
 
   return (
     <AppLayout>
@@ -140,8 +141,9 @@ export default function DashboardPage() {
             Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-[14px] text-slate-500">
-            Select one of the modules below. Only Account Management is active
-            in this build.
+            {isFreight
+              ? "Manage freight operations, shipments, documents and finance."
+              : "Manage the full trading pipeline from inquiry to deal confirmation."}
           </p>
         </div>
 
@@ -150,9 +152,9 @@ export default function DashboardPage() {
           <KpiStrip kpis={kpis} />
         </div>
 
-        {/* Module tiles — fixed 5-tile grid matching the screenshot */}
+        {/* Module tiles — company-specific */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {MODULES.map((m) => (
+          {modules.map((m) => (
             <ModuleTile key={m.name} m={m} />
           ))}
         </div>

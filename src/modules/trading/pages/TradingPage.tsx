@@ -11,7 +11,9 @@ import {
   ClipboardCheck,
   Handshake,
   TrendingUp,
+  Filter,
 } from "lucide-react";
+import { STATUS_LABELS } from "../data/seed";
 import { useTradingStore } from "../store/tradingStore";
 import { useFreightStore } from "@/modules/freight/store/freightStore";
 import { StatusBadge } from "../components/StatusBadge";
@@ -23,6 +25,7 @@ export default function TradingPage() {
   const { inquiries, deals, handleFreightDecision } = useTradingStore();
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [decisionDeal, setDecisionDeal] = useState<Deal | null>(null);
 
   // ── Stats ────────────────────────────────────────────────────────
@@ -36,12 +39,13 @@ export default function TradingPage() {
   // ── Filtered inquiries ───────────────────────────────────────────
   const filtered = inquiries.filter((inq) => {
     const q = search.toLowerCase();
-    return (
+    const matchSearch =
       !q ||
       inq.buyer.toLowerCase().includes(q) ||
       inq.product.toLowerCase().includes(q) ||
-      inq.id.toLowerCase().includes(q)
-    );
+      inq.id.toLowerCase().includes(q);
+    const matchStatus = !statusFilter || inq.status === statusFilter;
+    return matchSearch && matchStatus;
   });
 
   // ── Freight decision handler ─────────────────────────────────────
@@ -50,7 +54,6 @@ export default function TradingPage() {
     handleFreightDecision(decisionDeal.id, freightByUs);
     setDecisionDeal(null);
     if (freightByUs) {
-      // Auto-create freight inquiry from the deal and navigate to freight quotation step
       const destination =
         inquiries.find((i) => i.id === decisionDeal.inquiryId)
           ?.destinationCountry ?? "";
@@ -63,7 +66,8 @@ export default function TradingPage() {
         destination,
         tradingDealId: decisionDeal.id,
       });
-      navigate(`/freight/quotation/new?inquiryId=${freightInquiry.id}`);
+      // Navigate straight to shipment form — Path 1 skips quotation/booking
+      navigate(`/freight/shipment/new?inquiryId=${freightInquiry.id}`);
     }
   };
 
@@ -141,7 +145,7 @@ export default function TradingPage() {
           ))}
         </div>
 
-        {/* Search */}
+        {/* Search + Status Filter */}
         <div className="flex items-center gap-3 rounded-[16px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -152,6 +156,22 @@ export default function TradingPage() {
               className="pl-9"
             />
           </div>
+          {/* Status filter dropdown */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Filter className="h-4 w-4 text-slate-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-10 rounded-[12px] border border-slate-200 bg-white px-3 text-[13px] text-slate-700 shadow-[0_4px_14px_rgba(22,31,54,0.03)] focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-100"
+            >
+              <option value="">All Statuses</option>
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Inquiries table */}
@@ -160,6 +180,7 @@ export default function TradingPage() {
             <thead className="bg-slate-50 text-left text-[11px] uppercase tracking-[0.14em] text-slate-400">
               <tr>
                 <th className="px-4 py-3">Inquiry ID</th>
+                <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Buyer</th>
                 <th className="px-4 py-3">Product</th>
                 <th className="px-4 py-3">Qty</th>
@@ -185,6 +206,9 @@ export default function TradingPage() {
                     >
                       <td className="px-4 py-3 font-mono text-[12px] font-semibold text-blue-600">
                         {inq.id}
+                      </td>
+                      <td className="px-4 py-3 text-[12px] text-slate-500">
+                        {new Date(inq.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3 font-semibold text-slate-900">
                         {inq.buyer}
@@ -273,7 +297,7 @@ export default function TradingPage() {
               ) : (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-10 text-center text-slate-400"
                   >
                     No inquiries found. Start by creating a new inquiry.

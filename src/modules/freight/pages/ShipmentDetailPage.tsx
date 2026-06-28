@@ -1,18 +1,22 @@
 // src/modules/freight/pages/ShipmentDetailPage.tsx
 //
-// Unified shipment detail covering:
-//   Step 5 — Documentation
-//   Step 6 — Cargo Movement Tracking
-//   Step 7 — Finance
-//   Step 8 — Delivery
-//   Step 9 — Shipment Closure
+// Tabs: Logistics · Tracking · Documents · Finance · Closure
+//
+// Validation implemented:
+//   V4 — Document gate before advancing to out_for_delivery / delivered
+//   V5 — Hard block on closure when outstanding payments exist
+//   V6 — Full read-only lock when status === "completed"
+//   Action #1  — Logistics tab (editable shipment fields)
+//   Action #5  — Smart trading deal back-link banner
+//   Action #12 — Vendor charge recording input in Finance tab
 //
 // BE integration:
-//   GET  /api/v1/freight/shipments/:id     → load shipment
-//   POST /api/v1/documents/upload          → file upload (MinIO)
-//   PATCH /api/v1/freight/shipments/:id/status  → tracking update
-//   POST /api/v1/freight/shipments/:id/invoice  → generate invoice
-//   PATCH /api/v1/freight/shipments/:id/close   → close shipment
+//   GET  /api/v1/freight/shipments/:id
+//   PATCH /api/v1/freight/shipments/:id          → saveLogistics
+//   POST /api/v1/documents/upload                → uploadDocument (MinIO)
+//   PATCH /api/v1/freight/shipments/:id/status   → updateTrackingStatus
+//   POST /api/v1/freight/shipments/:id/invoice   → setFreightInvoice
+//   PATCH /api/v1/freight/shipments/:id/close    → closeShipment
 
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -20,22 +24,44 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { Upload, CheckCircle, Lock, Clock } from "lucide-react";
+import {
+  Upload,
+  CheckCircle,
+  Lock,
+  Clock,
+  AlertTriangle,
+  ExternalLink,
+  Ship,
+} from "lucide-react";
 import { useFreightStore } from "../store/freightStore";
 import { FreightStatusBadge } from "../components/FreightStatusBadge";
 import { TRACKING_SEQUENCE, FREIGHT_STATUS_LABELS } from "../data/seed";
 import type { FreightStatus, FreightDocument } from "../types";
+import {
+  canAdvanceToDelivery,
+  canCloseShipment,
+  DELIVERY_GATED_STATUSES,
+} from "../lib/validation";
 
-const TABS = ["tracking", "documents", "finance", "closure"] as const;
+// ─── Tab config ──────────────────────────────────────────────────
+const TABS = [
+  "logistics",
+  "tracking",
+  "documents",
+  "finance",
+  "closure",
+] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABELS: Record<Tab, string> = {
+  logistics: "Logistics",
   tracking: "Tracking",
   documents: "Documents",
   finance: "Finance",
   closure: "Closure",
 };
 
+// ─── Shared section card ──────────────────────────────────────────
 function SectionCard({
   title,
   children,
@@ -53,23 +79,62 @@ function SectionCard({
   );
 }
 
+// ─── Readonly display field (used in locked state) ────────────────
+function ReadonlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+        {label}
+      </div>
+      <div className="rounded-[10px] border border-slate-100 bg-slate-50 px-3 py-2 text-[13px] font-medium text-slate-700">
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────
 export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
     shipments,
+    inquiries,
     updateTrackingStatus,
     uploadDocument,
     recordPayment,
+    recordVendorCharge,
     setFreightInvoice,
     closeShipment,
+    updateShipmentLogistics,
   } = useFreightStore();
 
   const shipment = shipments.find((s) => s.id === id);
-  const [activeTab, setActiveTab] = useState<Tab>("tracking");
-  const [trackingRemarks, setTrackingRemarks] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>("logistics");
+
+  // Finance inputs
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [vendorAmount, setVendorAmount] = useState("");
   const [invoiceAmount, setInvoiceAmount] = useState("");
+
+  // Tracking
+  const [trackingRemarks, setTrackingRemarks] = useState("");
+  const [trackingError, setTrackingError] = useState<string | null>(null);
+
+  // Logistics edit state
+  const [logistics, setLogistics] = useState(() =>
+    shipment
+      ? {
+          containerNumber: shipment.containerNumber,
+          carrier: shipment.carrier,
+          etd: shipment.etd,
+          eta: shipment.eta,
+          origin: shipment.origin,
+          destination: shipment.destination,
+        }
+      : {},
+  );
+  const [logisticsSaved, setLogisticsSaved] = useState(false);
 
   if (!shipment) {
     return (
@@ -89,32 +154,64 @@ export default function ShipmentDetailPage() {
 
   const isLocked = shipment.status === "completed";
   const currentTrackingIdx = TRACKING_SEQUENCE.indexOf(shipment.status);
-  const nextStatus = TRACKING_SEQUENCE[currentTrackingIdx + 1] as
-    | FreightStatus
-    | undefined;
 
-  // ── Tracking ──────────────────────────────────────────────────
+  // V4: check doc gate for delivery-gated statuses
   const handleTrackingUpdate = (status: FreightStatus) => {
+    if (DELIVERY_GATED_STATUSES.has(status)) {
+      const { ok, missing } = canAdvanceToDelivery(shipment);
+      if (!ok) {
+        setTrackingError(
+          `Cannot advance to "${FREIGHT_STATUS_LABELS[status]}". Missing required documents: ${missing.join(", ")}.`,
+        );
+        return;
+      }
+    }
+    setTrackingError(null);
     updateTrackingStatus(
       shipment.id,
       status,
-      trackingRemarks || `Status updated to ${FREIGHT_STATUS_LABELS[status]}`
+      trackingRemarks || `Status updated to ${FREIGHT_STATUS_LABELS[status]}`,
     );
     setTrackingRemarks("");
   };
 
-  // ── Documents ────────────────────────────────────────────────
   const handleUpload = (doc: FreightDocument) => {
-    // BE: POST /api/v1/documents/upload with FormData
-    // For now simulate with a placeholder URL
-    const fakeUrl = `#uploaded-${doc.type}-${Date.now()}`;
-    uploadDocument(shipment.id, doc.type, fakeUrl);
+    // Trigger a hidden file input for this document type
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".pdf,.doc,.docx,.jpg,.jpeg,.png";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      // BE: POST /api/v1/documents/upload with FormData → returns MinIO URL
+      // For now, use a local object URL so the "View" link is functional
+      const localUrl = URL.createObjectURL(file);
+      uploadDocument(shipment.id, doc.type, localUrl);
+    };
+    input.click();
   };
 
-  // ── Finance ──────────────────────────────────────────────────
+  // V5: closure validation
+  const closureCheck = canCloseShipment(shipment);
+
+  // Finance derived
   const outstanding =
     (shipment.freightInvoiceAmount ?? 0) - shipment.clientPayments;
   const profit = shipment.clientPayments - shipment.vendorCharges;
+
+  // Action #5: find linked trading inquiry for back-link
+  const linkedInquiry = inquiries.find((i) => i.id === shipment.inquiryId);
+  const tradingDealId = linkedInquiry?.fromTradingDealId;
+
+  const handleSaveLogistics = () => {
+    // BE: PATCH /api/v1/freight/shipments/:id
+    updateShipmentLogistics(
+      shipment.id,
+      logistics as Parameters<typeof updateShipmentLogistics>[1],
+    );
+    setLogisticsSaved(true);
+    setTimeout(() => setLogisticsSaved(false), 2000);
+  };
 
   return (
     <AppLayout>
@@ -141,14 +238,38 @@ export default function ShipmentDetailPage() {
           </div>
         </div>
 
-        {/* Shipment summary */}
+        {/* Action #5: smart back-link to trading deal */}
+        {tradingDealId && (
+          <div className="flex items-center gap-3 rounded-[12px] border border-sky-200 bg-sky-50 px-4 py-3 text-[13px] text-sky-700">
+            <Ship className="h-4 w-4 shrink-0 text-sky-500" />
+            <span>
+              This shipment was created from{" "}
+              <strong>Trading Deal {tradingDealId}</strong>.
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  `/trading/deal/new?inquiryId=${linkedInquiry?.id ?? ""}`,
+                )
+              }
+              className="ml-auto flex items-center gap-1 rounded-[8px] border border-sky-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-sky-700 transition hover:bg-sky-100"
+            >
+              View Deal <ExternalLink className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
+        {/* Quick summary bar */}
         <div className="grid grid-cols-4 gap-3 rounded-[16px] border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(22,31,54,0.05)] text-[13px]">
-          {[
-            ["Carrier", shipment.carrier],
-            ["Container", shipment.containerNumber || "—"],
-            ["ETD", shipment.etd],
-            ["ETA", shipment.eta],
-          ].map(([label, value]) => (
+          {(
+            [
+              ["Carrier", shipment.carrier],
+              ["Container", shipment.containerNumber || "—"],
+              ["ETD", shipment.etd],
+              ["ETA", shipment.eta],
+            ] as [string, string][]
+          ).map(([label, value]) => (
             <div key={label}>
               <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                 {label}
@@ -159,13 +280,13 @@ export default function ShipmentDetailPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 rounded-[16px] border border-slate-200 bg-white p-2 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+        <div className="flex gap-2 overflow-x-auto rounded-[16px] border border-slate-200 bg-white p-2 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
           {TABS.map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`rounded-[12px] px-4 py-2.5 text-[14px] font-semibold transition ${
+              className={`shrink-0 rounded-[12px] px-4 py-2.5 text-[14px] font-semibold transition ${
                 activeTab === tab
                   ? "bg-blue-50 text-blue-600"
                   : "text-slate-500 hover:bg-slate-50"
@@ -176,10 +297,135 @@ export default function ShipmentDetailPage() {
           ))}
         </div>
 
-        {/* ── TRACKING TAB ──────────────────────────────────────── */}
+        {/* ── LOGISTICS TAB (Action #1) ────────────────────────── */}
+        {activeTab === "logistics" && (
+          <SectionCard title="Shipment Details">
+            {isLocked ? (
+              <div className="grid grid-cols-2 gap-4">
+                <ReadonlyField
+                  label="Container Number"
+                  value={shipment.containerNumber}
+                />
+                <ReadonlyField label="Carrier" value={shipment.carrier} />
+                <ReadonlyField label="Origin" value={shipment.origin} />
+                <ReadonlyField
+                  label="Destination"
+                  value={shipment.destination}
+                />
+                <ReadonlyField label="ETD" value={shipment.etd} />
+                <ReadonlyField label="ETA" value={shipment.eta} />
+              </div>
+            ) : (
+              <>
+                {/* V3 notice if from trading deal */}
+                {tradingDealId && (
+                  <div className="mb-4 flex items-center gap-2 rounded-[10px] border border-sky-100 bg-sky-50 px-3 py-2 text-[12px] text-sky-600">
+                    <Lock className="h-3.5 w-3.5 shrink-0" />
+                    Customer, origin and destination are locked — sourced from
+                    trading deal.
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { key: "containerNumber", label: "Container Number" },
+                    { key: "carrier", label: "Carrier" },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <Label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                        {label}
+                      </Label>
+                      <Input
+                        value={(logistics as Record<string, string>)[key] ?? ""}
+                        onChange={(e) =>
+                          setLogistics((l) => ({ ...l, [key]: e.target.value }))
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                  {/* V3: origin/destination read-only when from trading deal */}
+                  {tradingDealId ? (
+                    <>
+                      <ReadonlyField
+                        label="Origin"
+                        value={
+                          (logistics as Record<string, string>).origin ?? ""
+                        }
+                      />
+                      <ReadonlyField
+                        label="Destination"
+                        value={
+                          (logistics as Record<string, string>).destination ??
+                          ""
+                        }
+                      />
+                    </>
+                  ) : (
+                    <>
+                      {["origin", "destination"].map((key) => (
+                        <div key={key}>
+                          <Label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400 capitalize">
+                            {key}
+                          </Label>
+                          <Input
+                            value={
+                              (logistics as Record<string, string>)[key] ?? ""
+                            }
+                            onChange={(e) =>
+                              setLogistics((l) => ({
+                                ...l,
+                                [key]: e.target.value,
+                              }))
+                            }
+                            className="w-full"
+                          />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {[
+                    {
+                      key: "etd",
+                      label: "ETD (Estimated Departure)",
+                      type: "date",
+                    },
+                    {
+                      key: "eta",
+                      label: "ETA (Estimated Arrival)",
+                      type: "date",
+                    },
+                  ].map(({ key, label, type }) => (
+                    <div key={key}>
+                      <Label className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                        {label}
+                      </Label>
+                      <Input
+                        type={type}
+                        value={(logistics as Record<string, string>)[key] ?? ""}
+                        onChange={(e) =>
+                          setLogistics((l) => ({ ...l, [key]: e.target.value }))
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <Button onClick={handleSaveLogistics}>Save Changes</Button>
+                  {logisticsSaved && (
+                    <span className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600">
+                      <CheckCircle className="h-3.5 w-3.5" /> Saved
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+          </SectionCard>
+        )}
+
+        {/* ── TRACKING TAB ────────────────────────────────────── */}
         {activeTab === "tracking" && (
           <div className="space-y-4">
-            {/* Timeline */}
             <SectionCard title="Shipment Timeline">
               <div className="space-y-3">
                 {shipment.timeline.map((event, i) => (
@@ -212,8 +458,8 @@ export default function ShipmentDetailPage() {
               </div>
             </SectionCard>
 
-            {/* Update Status */}
-            {!isLocked && nextStatus && (
+            {/* Update Status — hidden when locked */}
+            {!isLocked && currentTrackingIdx < TRACKING_SEQUENCE.length - 1 && (
               <SectionCard title="Update Status">
                 <div className="space-y-3">
                   <div>
@@ -226,12 +472,18 @@ export default function ShipmentDetailPage() {
                       placeholder="Add remarks for this status update..."
                       className="w-full"
                     />
-                    {/* BE: Also captures user from JWT token server-side */}
                   </div>
+                  {/* V4: show doc gate error */}
+                  {trackingError && (
+                    <div className="flex items-start gap-2 rounded-[10px] border border-rose-200 bg-rose-50 px-3 py-2.5 text-[12px] text-rose-700">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
+                      {trackingError}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {TRACKING_SEQUENCE.slice(
                       currentTrackingIdx + 1,
-                      currentTrackingIdx + 3
+                      currentTrackingIdx + 3,
                     ).map((status) => (
                       <Button
                         key={status}
@@ -249,11 +501,10 @@ export default function ShipmentDetailPage() {
           </div>
         )}
 
-        {/* ── DOCUMENTS TAB ─────────────────────────────────────── */}
+        {/* ── DOCUMENTS TAB ────────────────────────────────────── */}
         {activeTab === "documents" && (
           <SectionCard title="Shipment Documents">
             <div className="space-y-2">
-              {/* Client Documents */}
               <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-blue-500">
                 Client Documents
               </div>
@@ -264,7 +515,7 @@ export default function ShipmentDetailPage() {
                     "packing_list",
                     "coo",
                     "insurance",
-                  ].includes(d.type)
+                  ].includes(d.type),
                 )
                 .map((doc) => (
                   <DocumentRow
@@ -275,7 +526,6 @@ export default function ShipmentDetailPage() {
                   />
                 ))}
 
-              {/* Forwarder Documents */}
               <div className="mb-3 mt-5 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-600">
                 Forwarder Documents
               </div>
@@ -287,7 +537,7 @@ export default function ShipmentDetailPage() {
                       "packing_list",
                       "coo",
                       "insurance",
-                    ].includes(d.type)
+                    ].includes(d.type),
                 )
                 .map((doc) => (
                   <DocumentRow
@@ -301,33 +551,35 @@ export default function ShipmentDetailPage() {
           </SectionCard>
         )}
 
-        {/* ── FINANCE TAB ───────────────────────────────────────── */}
+        {/* ── FINANCE TAB ──────────────────────────────────────── */}
         {activeTab === "finance" && (
           <div className="space-y-4">
-            {/* Summary cards */}
+            {/* KPI cards */}
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              {[
-                {
-                  label: "Freight Invoice",
-                  value: shipment.freightInvoiceAmount ?? 0,
-                  color: "text-blue-600",
-                },
-                {
-                  label: "Client Payments",
-                  value: shipment.clientPayments,
-                  color: "text-emerald-600",
-                },
-                {
-                  label: "Vendor Charges",
-                  value: shipment.vendorCharges,
-                  color: "text-rose-600",
-                },
-                {
-                  label: "Profit",
-                  value: profit,
-                  color: profit >= 0 ? "text-emerald-600" : "text-rose-600",
-                },
-              ].map(({ label, value, color }) => (
+              {(
+                [
+                  {
+                    label: "Freight Invoice",
+                    value: shipment.freightInvoiceAmount ?? 0,
+                    color: "text-blue-600",
+                  },
+                  {
+                    label: "Client Payments",
+                    value: shipment.clientPayments,
+                    color: "text-emerald-600",
+                  },
+                  {
+                    label: "Vendor Charges",
+                    value: shipment.vendorCharges,
+                    color: "text-rose-600",
+                  },
+                  {
+                    label: "Profit",
+                    value: profit,
+                    color: profit >= 0 ? "text-emerald-600" : "text-rose-600",
+                  },
+                ] as { label: string; value: number; color: string }[]
+              ).map(({ label, value, color }) => (
                 <div
                   key={label}
                   className="rounded-[14px] border border-slate-200 bg-white p-4 shadow-[0_4px_14px_rgba(22,31,54,0.04)]"
@@ -346,11 +598,11 @@ export default function ShipmentDetailPage() {
 
             {!isLocked && (
               <SectionCard title="Record Transactions">
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-5">
+                  {/* Set invoice */}
+                  <div className="space-y-2">
                     <Label className="block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                      Freight Invoice Amount (USD)
-                      {/* BE: POST /api/v1/freight/shipments/:id/invoice */}
+                      Freight Invoice (USD)
                     </Label>
                     <div className="flex gap-2">
                       <Input
@@ -365,18 +617,18 @@ export default function ShipmentDetailPage() {
                           if (invoiceAmount)
                             setFreightInvoice(
                               shipment.id,
-                              Number(invoiceAmount)
+                              Number(invoiceAmount),
                             );
                         }}
                       >
-                        Set Invoice
+                        Set
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-3">
+                  {/* Record client payment */}
+                  <div className="space-y-2">
                     <Label className="block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                      Record Client Payment (USD)
-                      {/* BE: POST /api/v1/freight/shipments/:id/payments */}
+                      Client Payment (USD)
                     </Label>
                     <div className="flex gap-2">
                       <Input
@@ -399,6 +651,35 @@ export default function ShipmentDetailPage() {
                       </Button>
                     </div>
                   </div>
+                  {/* Action #12: vendor charge input */}
+                  <div className="space-y-2">
+                    <Label className="block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                      Vendor Charge (USD)
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        value={vendorAmount}
+                        onChange={(e) => setVendorAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          if (vendorAmount) {
+                            recordVendorCharge(
+                              shipment.id,
+                              Number(vendorAmount),
+                            );
+                            setVendorAmount("");
+                          }
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 {outstanding > 0 && (
                   <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
@@ -411,7 +692,7 @@ export default function ShipmentDetailPage() {
           </div>
         )}
 
-        {/* ── CLOSURE TAB ───────────────────────────────────────── */}
+        {/* ── CLOSURE TAB ──────────────────────────────────────── */}
         {activeTab === "closure" && (
           <SectionCard title="Shipment Closure">
             {isLocked ? (
@@ -427,11 +708,16 @@ export default function ShipmentDetailPage() {
             ) : (
               <div className="space-y-4">
                 <p className="text-[14px] text-slate-600">
-                  Closing this shipment will lock all records and archive
-                  documents. This action cannot be undone.
+                  Closing this shipment will lock all records. This action
+                  cannot be undone.
                 </p>
-                <div className="rounded-[12px] bg-slate-50 p-4 text-[13px] text-slate-600 space-y-1">
-                  <div>✓ Checklist before closing:</div>
+
+                {/* Pre-closure checklist */}
+                <div className="rounded-[12px] bg-slate-50 p-4 text-[13px] space-y-2">
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                    Pre-Closure Checklist
+                  </div>
+                  {/* Status check */}
                   <div
                     className={
                       shipment.status === "delivered"
@@ -441,38 +727,71 @@ export default function ShipmentDetailPage() {
                   >
                     {shipment.status === "delivered" ? "✓" : "⚠"} Status:{" "}
                     {FREIGHT_STATUS_LABELS[shipment.status]}
+                    {shipment.status !== "delivered" && " — must be Delivered"}
                   </div>
+                  {/* Payments check */}
                   <div
                     className={
-                      shipment.documents.every((d) => d.fileUrl)
-                        ? "text-emerald-600"
-                        : "text-amber-600"
+                      outstanding === 0 ? "text-emerald-600" : "text-rose-600"
                     }
                   >
-                    {shipment.documents.every((d) => d.fileUrl) ? "✓" : "⚠"} All
-                    documents uploaded
+                    {outstanding === 0 ? "✓" : "✗"} Payments:{" "}
+                    {outstanding === 0
+                      ? "Fully cleared"
+                      : `USD ${outstanding.toLocaleString()} outstanding`}
                   </div>
-                  <div
-                    className={
-                      outstanding === 0 ? "text-emerald-600" : "text-amber-600"
-                    }
-                  >
-                    {outstanding === 0 ? "✓" : "⚠"} Outstanding: USD{" "}
-                    {outstanding.toLocaleString()}
-                  </div>
+                  {/* Documents check */}
+                  {(() => {
+                    const { reasons } = canCloseShipment(shipment);
+                    const docReason = reasons.find((r) =>
+                      r.startsWith("Missing doc"),
+                    );
+                    return (
+                      <div
+                        className={
+                          !docReason ? "text-emerald-600" : "text-amber-600"
+                        }
+                      >
+                        {!docReason ? "✓" : "⚠"} Documents:{" "}
+                        {docReason ?? "All required documents uploaded"}
+                      </div>
+                    );
+                  })()}
                 </div>
-                {/* BE: PATCH /api/v1/freight/shipments/:id/close */}
+
+                {/* V5: show all blocking reasons */}
+                {!closureCheck.ok && (
+                  <div className="space-y-1.5 rounded-[12px] border border-rose-200 bg-rose-50 px-4 py-3">
+                    <div className="flex items-center gap-2 text-[12px] font-bold text-rose-600">
+                      <AlertTriangle className="h-4 w-4" />
+                      Cannot close shipment:
+                    </div>
+                    {closureCheck.reasons.map((r, i) => (
+                      <div key={i} className="pl-6 text-[12px] text-rose-700">
+                        • {r}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* V5: button disabled when blockers exist */}
                 <Button
                   variant="secondary"
+                  disabled={!closureCheck.ok}
                   onClick={() => {
                     if (
                       confirm(
-                        "Close this shipment? This action cannot be undone."
+                        "Close this shipment? This action cannot be undone.",
                       )
                     ) {
                       closeShipment(shipment.id);
                     }
                   }}
+                  title={
+                    !closureCheck.ok
+                      ? "Resolve all checklist items before closing."
+                      : undefined
+                  }
                 >
                   <Lock className="h-4 w-4" />
                   Close & Archive Shipment
@@ -486,7 +805,7 @@ export default function ShipmentDetailPage() {
   );
 }
 
-// ─── Document Row ────────────────────────────────────────────────
+// ─── Document Row ─────────────────────────────────────────────────
 function DocumentRow({
   doc,
   locked,
@@ -502,9 +821,7 @@ function DocumentRow({
     <div className="flex items-center justify-between rounded-[12px] border border-slate-100 bg-slate-50 px-4 py-3">
       <div className="flex items-center gap-3">
         <div
-          className={`grid h-8 w-8 place-items-center rounded-[8px] ${
-            uploaded ? "bg-emerald-100" : "bg-slate-200"
-          }`}
+          className={`grid h-8 w-8 place-items-center rounded-[8px] ${uploaded ? "bg-emerald-100" : "bg-slate-200"}`}
         >
           {uploaded ? (
             <CheckCircle className="h-4 w-4 text-emerald-600" />
@@ -542,7 +859,6 @@ function DocumentRow({
             onClick={onUpload}
             className="rounded-[8px] border border-blue-200 bg-blue-50 px-3 py-1.5 text-[12px] font-medium text-blue-600 hover:bg-blue-100"
           >
-            {/* BE: Opens file picker → POST /api/v1/documents/upload → MinIO */}
             {uploaded ? "Replace" : "Upload"}
           </button>
         )}

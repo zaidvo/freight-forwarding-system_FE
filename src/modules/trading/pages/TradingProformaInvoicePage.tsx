@@ -4,6 +4,8 @@
 // Reuses ProformaInvoiceFormPanel and ProformaInvoicePreview
 // from src/modules/sales/components/ — no duplication.
 //
+// V1: Blocks PI issuance if no approved quotation exists for this inquiry.
+//
 // BE integration:
 //   POST /api/v1/trading/proforma-invoices
 //   Body: { inquiryId, quotationId, ...ProformaInvoiceForm }
@@ -13,7 +15,13 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/Button";
-import { Eye, FileText, Download, ArrowRight } from "lucide-react";
+import {
+  Eye,
+  FileText,
+  Download,
+  ArrowRight,
+  AlertTriangle,
+} from "lucide-react";
 import { WorkflowStepper } from "../components/WorkflowStepper";
 import { useTradingStore } from "../store/tradingStore";
 
@@ -32,11 +40,14 @@ export default function TradingProformaInvoicePage() {
   const inquiry = inquiries.find((i) => i.id === inquiryId);
   const quotation = quotations.find((q) => q.inquiryId === inquiryId);
 
+  // V1: a quotation must exist before a PI can be issued
+  const hasQuotation = !!quotation;
+
   // Pre-fill form from inquiry + quotation data
   const [form, setForm] = useState<ProformaInvoiceForm>({
     ...EMPTY_PROFORMA,
     piNumber: `PI-${new Date().getFullYear()}-${String(
-      Math.floor(Math.random() * 900) + 100
+      Math.floor(Math.random() * 900) + 100,
     )}`,
     buyerName: inquiry?.buyer ?? "",
     buyerAddress: "",
@@ -65,6 +76,8 @@ export default function TradingProformaInvoicePage() {
   const [saving, setSaving] = useState(false);
 
   const handleIssue = () => {
+    // V1 guard — should not be reachable via UI when blocked, but defensive check
+    if (!hasQuotation) return;
     setSaving(true);
     // BE: POST /api/v1/trading/proforma-invoices
     // { inquiryId, quotationId: quotation?.id, ...form }
@@ -104,7 +117,16 @@ export default function TradingProformaInvoicePage() {
             <Button variant="ghost" onClick={() => window.print()}>
               <Download className="h-4 w-4" /> Export PDF
             </Button>
-            <Button onClick={handleIssue} disabled={saving}>
+            {/* V1: disabled when no quotation exists */}
+            <Button
+              onClick={handleIssue}
+              disabled={saving || !hasQuotation}
+              title={
+                !hasQuotation
+                  ? "A quotation must be generated first."
+                  : undefined
+              }
+            >
               {saving ? "Issuing..." : "Issue PI & Continue"}{" "}
               <ArrowRight className="h-4 w-4" />
             </Button>
@@ -112,6 +134,27 @@ export default function TradingProformaInvoicePage() {
         </div>
 
         <WorkflowStepper currentStatus="quoted" />
+
+        {/* V1: Missing quotation warning */}
+        {!hasQuotation && (
+          <div className="flex items-start gap-3 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+            <div>
+              <span className="font-semibold">No quotation found.</span> A
+              quotation must be generated and approved for this inquiry before a
+              Proforma Invoice can be issued.{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/trading/quotation/new?inquiryId=${inquiryId}`)
+                }
+                className="font-semibold text-amber-700 underline hover:text-amber-900"
+              >
+                Create quotation →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile tab switcher */}
         <div className="flex gap-2 rounded-[16px] border border-slate-200 bg-white p-2 shadow-[0_8px_24px_rgba(22,31,54,0.05)] lg:hidden">
