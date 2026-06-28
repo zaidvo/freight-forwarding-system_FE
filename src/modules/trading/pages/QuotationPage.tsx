@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/Label";
 import { WorkflowStepper } from "../components/WorkflowStepper";
 import { useTradingStore } from "../store/tradingStore";
 import type { Quotation } from "../types";
-import { ArrowRight, Printer } from "lucide-react";
+import { ArrowRight, Printer, Edit2 } from "lucide-react";
 
 const INCOTERMS = [
   "EXW",
@@ -87,6 +87,9 @@ export default function QuotationPage() {
   const inquiry = inquiries.find((i) => i.id === inquiryId);
   const existing = quotations.find((q) => q.inquiryId === inquiryId);
 
+  // If a quotation already exists, start in view mode; otherwise edit mode.
+  const [isEditing, setIsEditing] = useState(!existing);
+
   const [form, setForm] = useState<
     Omit<Quotation, "id" | "status" | "auditTrail" | "createdAt">
   >({
@@ -123,6 +126,96 @@ export default function QuotationPage() {
     }
   };
 
+  // ── Read-only view ─────────────────────────────────────────────
+  if (existing && !isEditing) {
+    return (
+      <AppLayout>
+        <div className="mx-auto max-w-4xl space-y-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <span className="rounded-[8px] bg-sky-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] text-sky-600">
+                Trading · Step 2
+              </span>
+              <h1 className="mt-1.5 text-[26px] font-bold tracking-[-0.04em] text-slate-900">
+                Quotation
+              </h1>
+              <p className="mt-1 text-[13px] text-slate-500">
+                <span className="font-mono font-semibold text-blue-600">
+                  {existing.id}
+                </span>{" "}
+                · Issued for inquiry{" "}
+                <span className="font-mono font-semibold text-blue-600">
+                  {inquiryId}
+                </span>
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="secondary" onClick={() => navigate("/trading")}>
+                Back
+              </Button>
+              <Button variant="ghost" onClick={() => window.print()}>
+                <Printer className="h-4 w-4" /> Print
+              </Button>
+              <Button variant="ghost" onClick={() => setIsEditing(true)}>
+                <Edit2 className="h-4 w-4" /> Edit
+              </Button>
+              <Button
+                onClick={() =>
+                  navigate(`/trading/pi/new?inquiryId=${inquiryId}`)
+                }
+              >
+                Issue PI <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <WorkflowStepper currentStatus="inquiry_received" />
+
+          {/* Read-only quotation card */}
+          <div className="rounded-[18px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+            <div className="mb-4 text-[13px] font-bold uppercase tracking-[0.12em] text-slate-400">
+              Quotation Details
+            </div>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-[13px]">
+              {(
+                [
+                  ["Customer", existing.customer],
+                  ["Product", existing.product],
+                  ["Quantity", existing.quantity.toLocaleString()],
+                  [
+                    "Unit Price",
+                    `${existing.currency} ${existing.unitPrice.toLocaleString()}`,
+                  ],
+                  [
+                    "Total Value",
+                    `${existing.currency} ${(existing.quantity * existing.unitPrice).toLocaleString()}`,
+                  ],
+                  ["Incoterms", existing.incoterms],
+                  ["Payment Terms", existing.paymentTerms],
+                  ["Valid Until", existing.validUntil || "—"],
+                ] as [string, string][]
+              ).map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex justify-between border-b border-slate-100 py-2 last:border-0"
+                >
+                  <span className="text-slate-500">{label}</span>
+                  <span className="font-semibold text-slate-900">{value}</span>
+                </div>
+              ))}
+            </div>
+            {existing.remarks && (
+              <div className="mt-4 rounded-[10px] bg-slate-50 px-3 py-2.5 text-[13px] text-slate-600">
+                {existing.remarks}
+              </div>
+            )}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // ── Edit / Create form ─────────────────────────────────────────
   return (
     <AppLayout>
       <div className="mx-auto max-w-4xl space-y-5">
@@ -151,6 +244,11 @@ export default function QuotationPage() {
             <Button variant="ghost" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> Print
             </Button>
+            {existing && (
+              <Button variant="ghost" onClick={() => setIsEditing(false)}>
+                Cancel Edit
+              </Button>
+            )}
             <Button onClick={handleGenerate} disabled={saving}>
               {saving ? "Generating..." : "Generate & Issue PI"}{" "}
               <ArrowRight className="h-4 w-4" />

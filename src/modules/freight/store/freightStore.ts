@@ -28,7 +28,7 @@ type FreightStore = {
 
   // Step 1
   createInquiry: (
-    data: Omit<FreightInquiry, "id" | "status" | "timeline" | "createdAt">
+    data: Omit<FreightInquiry, "id" | "status" | "timeline" | "createdAt">,
   ) => FreightInquiry;
 
   // Auto-create from trading deal
@@ -43,12 +43,12 @@ type FreightStore = {
 
   // Step 2
   createQuotation: (
-    data: Omit<FreightQuotation, "id" | "status" | "createdAt">
+    data: Omit<FreightQuotation, "id" | "status" | "createdAt">,
   ) => FreightQuotation;
 
   // Step 3
   createBooking: (
-    data: Omit<Booking, "id" | "status" | "createdAt">
+    data: Omit<Booking, "id" | "status" | "createdAt">,
   ) => Booking;
 
   // Step 4
@@ -62,21 +62,21 @@ type FreightStore = {
       | "clientPayments"
       | "vendorCharges"
       | "createdAt"
-    >
+    >,
   ) => FreightShipment;
 
   // Step 5 — Documents
   uploadDocument: (
     shipmentId: string,
     docType: FreightDocument["type"],
-    fileUrl: string
+    fileUrl: string,
   ) => void;
 
   // Step 6 — Tracking
   updateTrackingStatus: (
     shipmentId: string,
     status: FreightStatus,
-    remarks: string
+    remarks: string,
   ) => void;
 
   // Step 7 — Finance
@@ -86,13 +86,24 @@ type FreightStore = {
 
   // Step 9 — Closure
   closeShipment: (shipmentId: string) => void;
+
+  // Logistics edit (Action #1 — Logistics tab save)
+  updateShipmentLogistics: (
+    shipmentId: string,
+    data: Partial<
+      Pick<
+        FreightShipment,
+        "containerNumber" | "carrier" | "etd" | "eta" | "origin" | "destination"
+      >
+    >,
+  ) => void;
 };
 
 const now = () => new Date().toISOString();
 const trackEvent = (
   status: FreightStatus,
   remarks: string,
-  user = "Current User"
+  user = "Current User",
 ): TrackingEvent => ({
   status,
   timestamp: now(),
@@ -119,6 +130,7 @@ const INITIAL_DOCS: FreightDocument[] = [
   },
   { id: "d7", type: "arrival_notice", label: "Arrival Notice", version: 0 },
   { id: "d8", type: "delivery_order", label: "Delivery Order", version: 0 },
+  { id: "d9", type: "pod", label: "Proof of Delivery", version: 0 },
 ];
 
 export const useFreightStore = create<FreightStore>((set) => ({
@@ -158,7 +170,7 @@ export const useFreightStore = create<FreightStore>((set) => ({
         trackEvent(
           "inquiry",
           `Auto-created from Trading Deal ${deal.tradingDealId}`,
-          "System"
+          "System",
         ),
       ],
       createdAt: now(),
@@ -189,7 +201,7 @@ export const useFreightStore = create<FreightStore>((set) => ({
       inquiries: s.inquiries.map((i) =>
         i.id === data.inquiryId
           ? { ...i, status: "quoted" as FreightStatus }
-          : i
+          : i,
       ),
     }));
     return quotation;
@@ -209,7 +221,7 @@ export const useFreightStore = create<FreightStore>((set) => ({
       inquiries: s.inquiries.map((i) =>
         i.id === data.inquiryId
           ? { ...i, status: "booked" as FreightStatus }
-          : i
+          : i,
       ),
     }));
     return booking;
@@ -233,7 +245,7 @@ export const useFreightStore = create<FreightStore>((set) => ({
       inquiries: s.inquiries.map((i) =>
         i.id === data.inquiryId
           ? { ...i, status: "shipment_created" as FreightStatus }
-          : i
+          : i,
       ),
     }));
     return shipment;
@@ -257,10 +269,10 @@ export const useFreightStore = create<FreightStore>((set) => ({
                       uploadedBy: "Current User",
                       version: doc.version + 1,
                     }
-                  : doc
+                  : doc,
               ),
             }
-          : shp
+          : shp,
       ),
     }));
   },
@@ -276,12 +288,12 @@ export const useFreightStore = create<FreightStore>((set) => ({
               status,
               timeline: [...shp.timeline, trackEvent(status, remarks)],
             }
-          : shp
+          : shp,
       ),
       inquiries: s.inquiries.map((i) =>
         s.shipments.find((shp) => shp.id === shipmentId)?.inquiryId === i.id
           ? { ...i, status }
-          : i
+          : i,
       ),
     }));
   },
@@ -293,7 +305,7 @@ export const useFreightStore = create<FreightStore>((set) => ({
       shipments: s.shipments.map((shp) =>
         shp.id === shipmentId
           ? { ...shp, clientPayments: shp.clientPayments + amount }
-          : shp
+          : shp,
       ),
     }));
   },
@@ -304,7 +316,7 @@ export const useFreightStore = create<FreightStore>((set) => ({
       shipments: s.shipments.map((shp) =>
         shp.id === shipmentId
           ? { ...shp, vendorCharges: shp.vendorCharges + amount }
-          : shp
+          : shp,
       ),
     }));
   },
@@ -313,7 +325,7 @@ export const useFreightStore = create<FreightStore>((set) => ({
     // BE: POST /api/v1/freight/shipments/:id/invoice
     set((s) => ({
       shipments: s.shipments.map((shp) =>
-        shp.id === shipmentId ? { ...shp, freightInvoiceAmount: amount } : shp
+        shp.id === shipmentId ? { ...shp, freightInvoiceAmount: amount } : shp,
       ),
     }));
   },
@@ -332,7 +344,17 @@ export const useFreightStore = create<FreightStore>((set) => ({
                 trackEvent("completed", "Shipment closed and archived"),
               ],
             }
-          : shp
+          : shp,
+      ),
+    }));
+  },
+
+  // ── Logistics edit (Action #1) ───────────────────────────────────
+  updateShipmentLogistics: (shipmentId, data) => {
+    // BE: PATCH /api/v1/freight/shipments/:id
+    set((s) => ({
+      shipments: s.shipments.map((shp) =>
+        shp.id === shipmentId ? { ...shp, ...data } : shp,
       ),
     }));
   },

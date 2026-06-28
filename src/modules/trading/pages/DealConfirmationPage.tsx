@@ -78,17 +78,21 @@ export default function DealConfirmationPage() {
     handleFreightDecision(deal.id, freightByUs);
     setShowDecision(false);
     if (freightByUs) {
-      // Auto-create freight inquiry from deal, navigate to freight quotation
+      // Auto-create freight inquiry from deal with full pre-filled data,
+      // then skip directly to shipment creation (quotation/booking not
+      // required when the trade deal already has pricing).
       const { createInquiryFromDeal } = useFreightStore.getState();
       const freightInquiry = createInquiryFromDeal({
         customer: deal.customer,
         product: deal.product,
         quantity: deal.quantity,
-        origin: inquiry?.destinationCountry ? "Pakistan" : "Pakistan",
+        origin: "Pakistan", // default origin — editable in shipment form
         destination: inquiry?.destinationCountry ?? "",
         tradingDealId: deal.id,
       });
-      navigate(`/freight/quotation/new?inquiryId=${freightInquiry.id}`);
+      // Navigate to shipment form pre-filled from this inquiry.
+      // Path 1 fields (customer, origin, destination) will be read-only there.
+      navigate(`/freight/shipment/new?inquiryId=${freightInquiry.id}`);
     } else {
       navigate("/trading");
     }

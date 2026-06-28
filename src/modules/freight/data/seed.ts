@@ -117,6 +117,7 @@ const EMPTY_DOCS: FreightDocument[] = [
   },
   { id: "d7", type: "arrival_notice", label: "Arrival Notice", version: 0 },
   { id: "d8", type: "delivery_order", label: "Delivery Order", version: 0 },
+  { id: "d9", type: "pod", label: "Proof of Delivery", version: 0 },
 ];
 
 export const SEED_SHIPMENTS: FreightShipment[] = [
@@ -140,7 +141,7 @@ export const SEED_SHIPMENTS: FreightShipment[] = [
             uploadedBy: "Omar Farooq",
             version: 1,
           }
-        : d
+        : d,
     ),
     timeline: [
       {
