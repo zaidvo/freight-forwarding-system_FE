@@ -1,5 +1,5 @@
 import { CalendarClock, Layers3, PencilLine, ShieldCheck, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/shared/components/ui/Button";
 import type { User } from "../types";
 import { StatusPill } from "./StatusPill";
 
