@@ -37,7 +37,11 @@ import {
   listUsers,
   updateUser,
 } from "@/shared/services/userService";
-import type { BackendGroup, BackendModule, BackendUser } from "@/shared/services/api";
+import type {
+  BackendGroup,
+  BackendModule,
+  BackendUser,
+} from "@/shared/services/api";
 import { listModules } from "@/shared/services/moduleService";
 import {
   createGroup,
@@ -185,7 +189,9 @@ export default function AccountsPage() {
   ) => {
     setAuditLogs((current) => [
       {
-        id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id:
+          crypto.randomUUID?.() ||
+          `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         actor: "Current admin",
         action,
         module,
@@ -207,7 +213,9 @@ export default function AccountsPage() {
       password: values.password,
     });
 
-    setUsers((current) => withCreatorNames([backendUserToUser(createdUser), ...current]));
+    setUsers((current) =>
+      withCreatorNames([backendUserToUser(createdUser), ...current]),
+    );
     appendAudit("create", "Account Management", `Created ${values.email}.`);
   };
 
@@ -262,7 +270,9 @@ export default function AccountsPage() {
     setUsers((current) =>
       withCreatorNames(
         current.map((entry) =>
-          entry.id === userId ? mergeBackendUser(entry, deactivatedUser) : entry,
+          entry.id === userId
+            ? mergeBackendUser(entry, deactivatedUser)
+            : entry,
         ),
       ),
     );
@@ -306,7 +316,9 @@ export default function AccountsPage() {
       ),
     );
     try {
-      const updatedGroup = await updateGroup(groupId, { module_ids: moduleIds });
+      const updatedGroup = await updateGroup(groupId, {
+        module_ids: moduleIds,
+      });
       setGroups((current) =>
         current.map((entry) =>
           entry.id === groupId ? mapBackendGroup(updatedGroup) : entry,
@@ -514,8 +526,9 @@ export default function AccountsPage() {
           </div>
         )}
 
-        {isRoot && visibleTab === "groups" && (
-          groupsLoading ? (
+        {isRoot &&
+          visibleTab === "groups" &&
+          (groupsLoading ? (
             <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
               Loading groups...
             </div>
@@ -529,8 +542,7 @@ export default function AccountsPage() {
               onToggleModule={handleToggleModule}
               onDeleteGroup={handleDeleteGroup}
             />
-          )
-        )}
+          ))}
 
         {visibleTab === "audit" && <AuditLogTable logs={auditLogs} />}
       </div>

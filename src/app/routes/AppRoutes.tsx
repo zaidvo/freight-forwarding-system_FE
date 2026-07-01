@@ -12,6 +12,7 @@ import LoginPage from "@/app/routes/Login";
 
 // Core
 import DashboardPage from "@/app/dashboard/pages/DashboardPage";
+
 // Accounts
 import AccountsPage from "@/modules/accounts/pages/AccountsPage";
 
@@ -38,7 +39,7 @@ import FreightInquiryPage from "@/companies/freight/pages/FreightInquiryPage";
 import FreightQuotationPage from "@/companies/freight/pages/FreightQuotationPage";
 import FreightBookingPage from "@/companies/freight/pages/FreightBookingPage";
 import FreightShipmentFormPage from "@/companies/freight/pages/FreightShipmentFormPage";
-import ShipmentDetailPage from "@/companies/freight/pages/ShipmentDetailPage"
+import ShipmentDetailPage from "@/companies/freight/pages/ShipmentDetailPage";
 
 export default function AppRoutes() {
   return (
@@ -46,10 +47,12 @@ export default function AppRoutes() {
       <AuthProvider>
         <CompanyProvider>
           <Routes>
+            {/* ── Guest only ── */}
             <Route element={<GuestRoute />}>
               <Route path="/login" element={<LoginPage />} />
             </Route>
 
+            {/* ── Protected ── */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<DashboardPage />} />
 
@@ -138,6 +141,7 @@ export default function AppRoutes() {
               </Route>
             </Route>
 
+            {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </CompanyProvider>
