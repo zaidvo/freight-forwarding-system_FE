@@ -50,9 +50,7 @@ export default function TradingProformaInvoicePage() {
   // Pre-fill form from inquiry + quotation data
   const [form, setForm] = useState<ProformaInvoiceForm>({
     ...EMPTY_PROFORMA,
-    piNumber: `PI-${new Date().getFullYear()}-${String(
-      Math.floor(Math.random() * 900) + 100,
-    )}`,
+    piNumber: DEFAULT_PI_NUMBER,
     buyerName: inquiry?.buyer ?? "",
     buyerAddress: "",
     buyerContact: inquiry?.email ?? "",

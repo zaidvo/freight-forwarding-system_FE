@@ -35,8 +35,8 @@ const SHARED_TILES: ModuleDef[] = [
     to: "/accounts",
     ready: true,
   },
-  { name: "Finance", icon: Wallet, color: "#059669" },
-  { name: "Marketing", icon: BarChart3, color: "#c026d3" },
+  { name: "Finance", slug: "finance", icon: Wallet, color: "#059669" },
+  { name: "Marketing", slug: "marketing", icon: BarChart3, color: "#c026d3" },
 ];
 
 // ─── Freight Forwarding tiles ─────────────────────────────────────
@@ -44,6 +44,7 @@ export const FREIGHT_MODULES: ModuleDef[] = [
   SHARED_TILES[0], // Account Management
   {
     name: "Freight Operations",
+    slug: "operations",
     icon: Ship,
     color: "#0ea5e9",
     to: "/freight",
@@ -52,6 +53,7 @@ export const FREIGHT_MODULES: ModuleDef[] = [
   SHARED_TILES[1], // Finance
   {
     name: "Sales",
+    slug: "sales",
     icon: Receipt,
     color: "#f59e0b",
     to: "/sales",
@@ -65,6 +67,7 @@ export const TRADING_MODULES: ModuleDef[] = [
   SHARED_TILES[0], // Account Management
   {
     name: "Trading Pipeline",
+    slug: "trading",
     icon: TrendingUp,
     color: "#0ea5e9",
     to: "/trading",
@@ -73,6 +76,7 @@ export const TRADING_MODULES: ModuleDef[] = [
   SHARED_TILES[1], // Finance
   {
     name: "Sales",
+    slug: "sales",
     icon: ShoppingCart,
     color: "#f59e0b",
     to: "/sales",

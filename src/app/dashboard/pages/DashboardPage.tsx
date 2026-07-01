@@ -131,6 +131,7 @@ export default function DashboardPage() {
 
   const kpis = isFreight ? freightKpis : tradingKpis;
   const modules = isFreight ? FREIGHT_MODULES : TRADING_MODULES;
+  const visibleModules = modules.filter((m) => hasModuleAccess(m.slug));
 
   return (
     <AppLayout>
@@ -141,13 +142,9 @@ export default function DashboardPage() {
             Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-[14px] text-slate-500">
-<<<<<<< HEAD
-            Select one of your available modules below.
-=======
             {isFreight
               ? "Manage freight operations, shipments, documents and finance."
               : "Manage the full trading pipeline from inquiry to deal confirmation."}
->>>>>>> 45dcae5 (updated format)
           </p>
         </div>
 
@@ -158,11 +155,7 @@ export default function DashboardPage() {
 
         {/* Module tiles — company-specific */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-<<<<<<< HEAD
           {visibleModules.map((m) => (
-=======
-          {modules.map((m) => (
->>>>>>> 45dcae5 (updated format)
             <ModuleTile key={m.name} m={m} />
           ))}
         </div>
