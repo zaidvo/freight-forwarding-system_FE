@@ -1,7 +1,7 @@
 // src/modules/operations/pages/PackingListPage.tsx
 import { useState } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/Button";
+import { AppLayout } from "@/app/layout/AppLayout";
+import { Button } from "@/shared/components/ui/Button";
 import { Download, Eye, FileText } from "lucide-react";
 import { PackingListFormPanel } from "../components/PackingListForm";
 import { PackingListPreview } from "../components/PackingListPreview";

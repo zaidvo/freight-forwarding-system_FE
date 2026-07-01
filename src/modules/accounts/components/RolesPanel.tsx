@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Checkbox";
-import { Input } from "@/components/ui/Input";
+import { Button } from "@/shared/components/ui/Button";
+import { Checkbox } from "@/shared/components/ui/Checkbox";
+import { Input } from "@/shared/components/ui/Input";
 import type { AppModule, Group } from "../types";
 
 type RolesPanelProps = {
