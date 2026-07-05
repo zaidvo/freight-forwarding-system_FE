@@ -147,6 +147,12 @@ const TRADING_NAV: NavSection[] = [
         moduleSlug: "operations",
       },
       {
+        label: "Import Shipments",
+        to: "/trading/imports",
+        icon: Ship,
+        moduleSlug: "operations",
+      },
+      {
         label: "New Inquiry",
         to: "/trading/inquiry/new",
         icon: ShoppingCart,
@@ -223,6 +229,7 @@ const PAGE_LABELS: Record<string, string> = {
   "/trading/pi/new": "Proforma Invoice",
   "/trading/po/new": "Purchase Order",
   "/trading/deal/new": "Deal Confirmation",
+  "/trading/imports": "Import Shipments",
   "/freight": "Freight Operations",
   "/freight/inquiry/new": "New Freight Inquiry",
   "/freight/quotation/new": "Freight Quotation",
