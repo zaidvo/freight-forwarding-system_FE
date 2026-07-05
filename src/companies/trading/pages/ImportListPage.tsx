@@ -1,6 +1,6 @@
 // src/companies/trading/pages/ImportListPage.tsx
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Search, Ship, FileText, CheckCircle, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
@@ -9,9 +9,13 @@ import NewImportDialog from "../components/import/NewImportDialog";
 
 export default function ImportListPage() {
   const navigate = useNavigate();
-  const { shipments, createShipment } = useImportStore();
+  const { shipments, createShipment, loadShipments, isLoading, error } = useImportStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    void loadShipments();
+  }, [loadShipments]);
 
   // Filter shipments
   const filtered = shipments.filter(
@@ -26,14 +30,14 @@ export default function ImportListPage() {
   const hblPending = shipments.filter((s) => !s.houseBL || s.houseBL.status !== "approved").length;
   const completed = shipments.filter((s) => s.status === "completed").length;
 
-  const handleCreate = (data: {
+  const handleCreate = async (data: {
     customer: string;
     salesperson: string;
     company: string;
     expectedArrivalDate: string;
     remarks: string;
   }) => {
-    const shipment = createShipment(data);
+    const shipment = await createShipment(data);
     setDialogOpen(false);
     navigate(`/trading/imports/${shipment.id}`);
   };
@@ -111,6 +115,12 @@ export default function ImportListPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+            {error}
+          </div>
+        )}
+
         {/* Data Grid */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-[0_4px_20px_rgba(22,31,54,0.04)]">
           <div className="flex items-center justify-between border-b border-slate-100 p-4">
@@ -182,7 +192,7 @@ export default function ImportListPage() {
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-5 py-12 text-center text-[13px] text-slate-500">
-                      No shipments found matching your search.
+                      {isLoading ? "Loading import shipments..." : "No shipments found matching your search."}
                     </td>
                   </tr>
                 )}

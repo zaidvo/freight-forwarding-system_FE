@@ -1,5 +1,6 @@
 // src/companies/trading/pages/ImportWorkspacePage.tsx
 
+import { useEffect } from "react";
 import { ArrowLeft, Box } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
@@ -9,14 +10,18 @@ import WorkflowTimeline from "../components/import/WorkflowTimeline";
 export default function ImportWorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getShipment } = useImportStore();
+  const { getShipment, loadShipments, isLoading } = useImportStore();
   const shipment = getShipment(id!);
+
+  useEffect(() => {
+    if (!shipment) void loadShipments();
+  }, [shipment, loadShipments]);
 
   if (!shipment) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64 text-slate-500">
-          Shipment not found
+          {isLoading ? "Loading shipment..." : "Shipment not found"}
         </div>
       </AppLayout>
     );

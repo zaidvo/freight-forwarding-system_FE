@@ -11,6 +11,7 @@ import ContainerTable from "./ContainerTable";
 import PdfUploadSection from "./PdfUploadSection";
 import DocumentStatusBadge from "./DocumentStatusBadge";
 import type { ContainerRow, PdfAttachment, MasterBL } from "../../types/importTypes";
+import { downloadImportPdf } from "../../services/tradingImportService";
 
 const inputClasses = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100";
 const labelClasses = "block text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5";
@@ -19,7 +20,7 @@ const autoFillBadge = "ml-1.5 inline-flex items-center gap-0.5 rounded-md bg-ind
 export default function MasterBLForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getShipment, saveMasterBL, attachPdf, updateDocumentStatus } = useImportStore();
+  const { getShipment, saveMasterBL, uploadPdf, loadShipments, isLoading } = useImportStore();
   const shipment = getShipment(id!);
   const existing = shipment?.masterBL;
   const hbl = shipment?.houseBL;
@@ -59,35 +60,79 @@ export default function MasterBLForm() {
     setForm((f) => ({ ...f, [field]: value }));
 
   useEffect(() => {
+    if (!shipment) void loadShipments();
+  }, [shipment, loadShipments]);
+
+  useEffect(() => {
+    if (!shipment) return;
+    setForm({
+      shippingLine: existing?.shippingLine ?? "",
+      mblNumber: existing?.mblNumber ?? "",
+      bookingNumber: existing?.bookingNumber ?? hbl?.bookingNumber ?? "",
+      placeOfReceipt: existing?.placeOfReceipt ?? hbl?.placeOfReceipt ?? "",
+      pol: existing?.pol ?? hbl?.pol ?? "",
+      pod: existing?.pod ?? hbl?.pod ?? "",
+      placeOfDelivery: existing?.placeOfDelivery ?? hbl?.placeOfDelivery ?? "",
+      vessel: existing?.vessel ?? hbl?.vessel ?? "",
+      voyage: existing?.voyage ?? hbl?.voyage ?? "",
+      shipper: existing?.shipper ?? hbl?.shipper ?? "",
+      consignee: existing?.consignee ?? hbl?.consignee ?? shipment.customer ?? "",
+      notifyParty: existing?.notifyParty ?? hbl?.notifyParty ?? "",
+      forwarderReference: existing?.forwarderReference ?? "",
+      cargoDescription: existing?.cargoDescription ?? hbl?.cargoDescription ?? "",
+      packages: existing?.packages ?? hbl?.packages ?? 0,
+      grossWeight: existing?.grossWeight ?? hbl?.grossWeight ?? 0,
+      cbm: existing?.cbm ?? hbl?.cbm ?? 0,
+      freightTerms: existing?.freightTerms ?? hbl?.freightTerms ?? "Prepaid",
+      freightCharges: existing?.freightCharges ?? "",
+      countryOfOrigin: existing?.countryOfOrigin ?? "",
+      placeOfIssue: existing?.placeOfIssue ?? "",
+      issueDate: existing?.issueDate ?? new Date().toISOString().slice(0, 10),
+      onBoardDate: existing?.onBoardDate ?? hbl?.onBoardDate ?? "",
+    });
+    setContainers(existing?.containers?.length ? existing.containers : hbl?.containers?.length ? hbl.containers : [emptyContainer()]);
+    setPdf(existing?.pdf);
+  }, [existing, hbl, shipment]);
+
+  useEffect(() => {
     const totalPackages = containers.reduce((s, c) => s + (c.packages || 0), 0);
     const totalGross = containers.reduce((s, c) => s + (c.grossWeight || 0), 0);
     const totalCbm = containers.reduce((s, c) => s + (c.cbm || 0), 0);
     setForm((f) => ({ ...f, packages: totalPackages, grossWeight: totalGross, cbm: totalCbm }));
   }, [containers]);
 
-  const handleSave = () => {
-    saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">);
+  const handleSave = async () => {
+    await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, false);
     navigate(`/trading/imports/${id}`);
   };
 
-  const handleSubmit = () => {
-    saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">);
-    updateDocumentStatus(id!, "masterBL", "pending_approval");
+  const handleSubmit = async () => {
+    await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, true);
     navigate(`/trading/imports/${id}`);
   };
 
-  const handlePdfUpload = (file: File) => {
-    const attachment: PdfAttachment = {
-      fileName: file.name, fileSize: file.size,
-      blobUrl: URL.createObjectURL(file),
-      uploadedAt: new Date().toISOString(), uploadedBy: "Current User",
-    };
+  const handlePdfUpload = async (file: File) => {
+    const attachment = await uploadPdf(id!, "masterBL", file);
     setPdf(attachment);
-    if (existing) attachPdf(id!, "masterBL", attachment);
+  };
+
+  const openPdf = async (download = false) => {
+    if (!pdf) return;
+    const blob = await downloadImportPdf(id!, "masterBL");
+    const url = URL.createObjectURL(blob);
+    if (download) {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = pdf.fileName;
+      link.click();
+    } else {
+      window.open(url, "_blank");
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   };
 
   if (!shipment) {
-    return <AppLayout><div className="flex items-center justify-center h-64 text-slate-500">Shipment not found</div></AppLayout>;
+    return <AppLayout><div className="flex items-center justify-center h-64 text-slate-500">{isLoading ? "Loading shipment..." : "Shipment not found"}</div></AppLayout>;
   }
 
   return (
@@ -204,7 +249,7 @@ export default function MasterBLForm() {
 
           {/* Sidebar */}
           <div className="space-y-4">
-            <PdfUploadSection pdf={pdf} onUpload={handlePdfUpload} label="Master BL Reference PDF" />
+            <PdfUploadSection pdf={pdf} onUpload={handlePdfUpload} onView={() => openPdf(false)} onDownload={() => openPdf(true)} label="Master BL Reference PDF" />
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h4 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-3">Shipment Info</h4>
               <div className="space-y-2 text-[13px]">

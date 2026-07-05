@@ -14,8 +14,9 @@ export type ShipmentStage =
   | "Draft BL"
   | "HBL Created"
   | "MBL Created"
-  | "Arrival Notice"
-  | "Delivery Order"
+  | "Freight Invoice"
+  | "Payment Receipt"
+  | "Detention Invoice"
   | "Invoice Generated"
   | "Completed";
 
@@ -294,6 +295,39 @@ export type ImportClearingInvoice = {
 
 // ─── Shipment Master Record ──────────────────────────────────────
 
+export type ImportPaymentReceipt = {
+  id: string;
+  shipmentId: string;
+  status: DocumentStatus;
+  audit: AuditRecord;
+
+  receiptNo: string;
+  tid: string;
+  amount: number;
+  currency: string;
+  paymentDate: string;
+  renderData?: Record<string, unknown>;
+};
+
+export type DetentionInvoice = {
+  id: string;
+  shipmentId: string;
+  status: DocumentStatus;
+  audit: AuditRecord;
+
+  invoiceNo: string;
+  detentionStart: string;
+  detentionEnd: string;
+  freeDays: number;
+  chargeableDays: number;
+  perDayAmount: number;
+  detentionAmount: number;
+  securityDeposit: number;
+  refundAmount: number;
+  currency: string;
+  manualFields: Record<string, unknown>;
+  renderData?: Record<string, unknown>;
+};
 export type ImportShipment = {
   id: string;
   referenceNo: string;
@@ -314,6 +348,8 @@ export type ImportShipment = {
   arrivalNotice: ArrivalNotice | null;
   deliveryOrder: DeliveryOrder | null;
   clearingInvoice: ImportClearingInvoice | null;
+  paymentReceipt: ImportPaymentReceipt | null;
+  detentionInvoice: DetentionInvoice | null;
 };
 
 // ─── Default charge names for Import Clearing Invoice ────────────

@@ -47,9 +47,9 @@ import ImportWorkspacePage from "@/companies/trading/pages/ImportWorkspacePage";
 import DraftBLForm from "@/companies/trading/components/import/DraftBLForm";
 import HouseBLForm from "@/companies/trading/components/import/HouseBLForm";
 import MasterBLForm from "@/companies/trading/components/import/MasterBLForm";
-import ArrivalNoticeForm from "@/companies/trading/components/import/ArrivalNoticeForm";
-import DeliveryOrderForm from "@/companies/trading/components/import/DeliveryOrderForm";
 import ImportClearingInvoiceForm from "@/companies/trading/components/import/ImportClearingInvoiceForm";
+import PaymentReceiptForm from "@/companies/trading/components/import/PaymentReceiptForm";
+import DetentionInvoiceForm from "@/companies/trading/components/import/DetentionInvoiceForm";
 
 export default function AppRoutes() {
   return (
@@ -155,9 +155,9 @@ export default function AppRoutes() {
                 <Route path="/trading/imports/:id/draft-bl" element={<DraftBLForm />} />
                 <Route path="/trading/imports/:id/hbl" element={<HouseBLForm />} />
                 <Route path="/trading/imports/:id/mbl" element={<MasterBLForm />} />
-                <Route path="/trading/imports/:id/arrival-notice" element={<ArrivalNoticeForm />} />
-                <Route path="/trading/imports/:id/delivery-order" element={<DeliveryOrderForm />} />
                 <Route path="/trading/imports/:id/invoice" element={<ImportClearingInvoiceForm />} />
+                <Route path="/trading/imports/:id/payment-receipt" element={<PaymentReceiptForm />} />
+                <Route path="/trading/imports/:id/detention-invoice" element={<DetentionInvoiceForm />} />
               </Route>
             </Route>
 

@@ -6,29 +6,41 @@ import { useRef } from "react";
 
 type Props = {
   pdf?: PdfAttachment;
-  onUpload: (file: File) => void;
+  onUpload: (file: File) => void | Promise<void>;
+  onView?: () => void | Promise<void>;
+  onDownload?: () => void | Promise<void>;
   label?: string;
 };
 
 export default function PdfUploadSection({
   pdf,
   onUpload,
+  onView,
+  onDownload,
   label = "Reference PDF",
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) onUpload(file);
+    if (file) await onUpload(file);
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const handleView = () => {
+  const handleView = async () => {
+    if (onView) {
+      await onView();
+      return;
+    }
     if (pdf?.blobUrl) window.open(pdf.blobUrl, "_blank");
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!pdf) return;
+    if (onDownload) {
+      await onDownload();
+      return;
+    }
     const a = document.createElement("a");
     a.href = pdf.blobUrl;
     a.download = pdf.fileName;

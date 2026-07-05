@@ -4,9 +4,9 @@ import {
   FileText,
   FileCheck,
   FilePlus,
-  Bell,
-  Truck,
   Receipt,
+  CreditCard,
+  Clock,
   Check,
   Circle,
   Lock,
@@ -25,7 +25,7 @@ type StepConfig = {
   icon: React.ElementType;
   color: string;
   bgColor: string;
-  docKey: "draftBL" | "houseBL" | "masterBL" | "arrivalNotice" | "deliveryOrder" | "clearingInvoice";
+  docKey: "draftBL" | "houseBL" | "masterBL" | "clearingInvoice" | "paymentReceipt" | "detentionInvoice";
 };
 
 const STEPS: StepConfig[] = [
@@ -54,28 +54,28 @@ const STEPS: StepConfig[] = [
     docKey: "masterBL",
   },
   {
-    key: "arrival-notice",
-    label: "Arrival Notice",
-    icon: Bell,
-    color: "text-amber-500",
-    bgColor: "bg-amber-50",
-    docKey: "arrivalNotice",
-  },
-  {
-    key: "delivery-order",
-    label: "Delivery Order",
-    icon: Truck,
-    color: "text-emerald-500",
-    bgColor: "bg-emerald-50",
-    docKey: "deliveryOrder",
-  },
-  {
     key: "invoice",
-    label: "Import Clearing Invoice",
+    label: "Freight Invoice",
     icon: Receipt,
     color: "text-rose-500",
     bgColor: "bg-rose-50",
     docKey: "clearingInvoice",
+  },
+  {
+    key: "payment-receipt",
+    label: "Import Payment Receipt",
+    icon: CreditCard,
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-50",
+    docKey: "paymentReceipt",
+  },
+  {
+    key: "detention-invoice",
+    label: "Detention Invoice",
+    icon: Clock,
+    color: "text-amber-500",
+    bgColor: "bg-amber-50",
+    docKey: "detentionInvoice",
   },
 ];
 

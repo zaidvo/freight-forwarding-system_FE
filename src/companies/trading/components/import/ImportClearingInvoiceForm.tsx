@@ -19,7 +19,7 @@ const autoFillBadge =
 export default function ImportClearingInvoiceForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getShipment, saveClearingInvoice, updateDocumentStatus } =
+  const { getShipment, saveClearingInvoice } =
     useImportStore();
   const shipment = getShipment(id!);
   const existing = shipment?.clearingInvoice;
@@ -76,8 +76,8 @@ export default function ImportClearingInvoiceForm() {
   const set = (field: string, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }));
 
-  const handleSave = () => {
-    saveClearingInvoice(id!, {
+  const handleSave = async () => {
+    await saveClearingInvoice(id!, {
       ...form,
       charges,
       ...totals
@@ -85,13 +85,12 @@ export default function ImportClearingInvoiceForm() {
     navigate(`/trading/imports/${id}`);
   };
 
-  const handleSubmit = () => {
-    saveClearingInvoice(id!, {
+  const handleSubmit = async () => {
+    await saveClearingInvoice(id!, {
       ...form,
       charges,
       ...totals
     } as Omit<ImportClearingInvoice, "id" | "shipmentId" | "status" | "audit">);
-    updateDocumentStatus(id!, "clearingInvoice", "pending_approval");
     navigate(`/trading/imports/${id}`);
   };
 
@@ -122,7 +121,7 @@ export default function ImportClearingInvoiceForm() {
               <div className="flex items-center gap-2">
                 <Receipt className="h-5 w-5 text-rose-500" />
                 <h1 className="text-[20px] font-bold tracking-tight text-slate-900">
-                  Import Clearing Invoice
+                  Freight Invoice
                 </h1>
                 {existing && (
                   <DocumentStatusBadge status={existing.status} size="md" />
@@ -177,7 +176,7 @@ export default function ImportClearingInvoiceForm() {
             {/* Invoice Details - Manual Input */}
             <div className="rounded-2xl border border-rose-200 bg-rose-50/30 p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h3 className="text-[14px] font-semibold text-slate-800 mb-4">
-                Invoice Details
+                Freight Invoice Details
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>

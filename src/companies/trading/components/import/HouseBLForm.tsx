@@ -11,6 +11,7 @@ import ContainerTable from "./ContainerTable";
 import PdfUploadSection from "./PdfUploadSection";
 import DocumentStatusBadge from "./DocumentStatusBadge";
 import type { ContainerRow, PdfAttachment, HouseBL } from "../../types/importTypes";
+import { downloadImportPdf } from "../../services/tradingImportService";
 
 const inputClasses =
   "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100";
@@ -22,7 +23,7 @@ const autoFillBadge =
 export default function HouseBLForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getShipment, saveHouseBL, attachPdf, updateDocumentStatus } = useImportStore();
+  const { getShipment, saveHouseBL, uploadPdf, loadShipments, isLoading } = useImportStore();
   const shipment = getShipment(id!);
   const existing = shipment?.houseBL;
   const draftBL = shipment?.draftBL;
@@ -62,6 +63,41 @@ export default function HouseBLForm() {
     setForm((f) => ({ ...f, [field]: value }));
 
   useEffect(() => {
+    if (!shipment) void loadShipments();
+  }, [shipment, loadShipments]);
+
+  useEffect(() => {
+    if (!shipment) return;
+    setForm({
+      hblNumber: existing?.hblNumber ?? "",
+      bookingNumber: existing?.bookingNumber ?? draftBL?.bookingNo ?? "",
+      serviceContract: existing?.serviceContract ?? "",
+      placeOfReceipt: existing?.placeOfReceipt ?? "",
+      pol: existing?.pol ?? draftBL?.pol ?? "",
+      pod: existing?.pod ?? draftBL?.pod ?? "",
+      placeOfDelivery: existing?.placeOfDelivery ?? draftBL?.placeOfDelivery ?? "",
+      vessel: existing?.vessel ?? draftBL?.vessel ?? "",
+      voyage: existing?.voyage ?? draftBL?.voyage ?? "",
+      shipper: existing?.shipper ?? draftBL?.shipper ?? "",
+      consignee: existing?.consignee ?? draftBL?.consignee ?? shipment.customer ?? "",
+      notifyParty: existing?.notifyParty ?? draftBL?.notifyParty ?? "",
+      deliveryAgent: existing?.deliveryAgent ?? "",
+      marksAndNumbers: existing?.marksAndNumbers ?? "",
+      cargoDescription: existing?.cargoDescription ?? draftBL?.cargoDescription ?? "",
+      packages: existing?.packages ?? draftBL?.packages ?? 0,
+      grossWeight: existing?.grossWeight ?? draftBL?.grossWeight ?? 0,
+      netWeight: existing?.netWeight ?? draftBL?.netWeight ?? 0,
+      cbm: existing?.cbm ?? draftBL?.cbm ?? 0,
+      freightTerms: existing?.freightTerms ?? draftBL?.freightTerms ?? "Prepaid",
+      placeOfIssue: existing?.placeOfIssue ?? "",
+      issueDate: existing?.issueDate ?? new Date().toISOString().slice(0, 10),
+      onBoardDate: existing?.onBoardDate ?? draftBL?.onBoardDate ?? "",
+    });
+    setContainers(existing?.containers?.length ? existing.containers : draftBL?.containers?.length ? draftBL.containers : [emptyContainer()]);
+    setPdf(existing?.pdf);
+  }, [existing, draftBL, shipment]);
+
+  useEffect(() => {
     const totalPackages = containers.reduce((s, c) => s + (c.packages || 0), 0);
     const totalGross = containers.reduce((s, c) => s + (c.grossWeight || 0), 0);
     const totalNet = containers.reduce((s, c) => s + (c.netWeight || 0), 0);
@@ -75,34 +111,41 @@ export default function HouseBLForm() {
     }));
   }, [containers]);
 
-  const handleSave = () => {
-    saveHouseBL(id!, { ...form, containers, pdf } as Omit<HouseBL, "id" | "shipmentId" | "status" | "audit">);
+  const handleSave = async () => {
+    await saveHouseBL(id!, { ...form, containers, pdf } as Omit<HouseBL, "id" | "shipmentId" | "status" | "audit">, false);
     navigate(`/trading/imports/${id}`);
   };
 
-  const handleSubmit = () => {
-    saveHouseBL(id!, { ...form, containers, pdf } as Omit<HouseBL, "id" | "shipmentId" | "status" | "audit">);
-    updateDocumentStatus(id!, "houseBL", "pending_approval");
+  const handleSubmit = async () => {
+    await saveHouseBL(id!, { ...form, containers, pdf } as Omit<HouseBL, "id" | "shipmentId" | "status" | "audit">, true);
     navigate(`/trading/imports/${id}`);
   };
 
-  const handlePdfUpload = (file: File) => {
-    const attachment: PdfAttachment = {
-      fileName: file.name,
-      fileSize: file.size,
-      blobUrl: URL.createObjectURL(file),
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: "Current User",
-    };
+  const handlePdfUpload = async (file: File) => {
+    const attachment = await uploadPdf(id!, "houseBL", file);
     setPdf(attachment);
-    if (existing) attachPdf(id!, "houseBL", attachment);
+  };
+
+  const openPdf = async (download = false) => {
+    if (!pdf) return;
+    const blob = await downloadImportPdf(id!, "houseBL");
+    const url = URL.createObjectURL(blob);
+    if (download) {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = pdf.fileName;
+      link.click();
+    } else {
+      window.open(url, "_blank");
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   };
 
   if (!shipment) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64 text-slate-500">
-          Shipment not found
+          {isLoading ? "Loading shipment..." : "Shipment not found"}
         </div>
       </AppLayout>
     );
@@ -294,7 +337,7 @@ export default function HouseBLForm() {
 
           {/* Sidebar */}
           <div className="space-y-4">
-            <PdfUploadSection pdf={pdf} onUpload={handlePdfUpload} label="House BL Reference PDF" />
+            <PdfUploadSection pdf={pdf} onUpload={handlePdfUpload} onView={() => openPdf(false)} onDownload={() => openPdf(true)} label="House BL Reference PDF" />
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h4 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-3">Shipment Info</h4>
               <div className="space-y-2 text-[13px]">
