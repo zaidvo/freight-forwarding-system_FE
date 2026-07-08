@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import type { ImportShipment, DraftBL, HouseBL, MasterBL, ImportClearingInvoice, ImportPaymentReceipt, DetentionInvoice } from "../types/importTypes";
+import type { ImportShipment, DraftBL, HouseBL, MasterBL, ImportClearingInvoice, ImportPaymentReceipt, DetentionInvoice, ContainerRow } from "../types/importTypes";
 
 // Helper to draw a border box
 function drawBox(doc: jsPDF, x: number, y: number, w: number, h: number, title?: string) {
@@ -21,7 +21,7 @@ function drawWrappedText(doc: jsPDF, text: string, x: number, y: number, maxWidt
   doc.setFontSize(fontSize);
   doc.setTextColor(30, 41, 59);
   
-  const lines = doc.splitTextToSize(text || "—", maxWidth);
+  const lines = doc.splitTextToSize(text || "-", maxWidth);
   let currentY = y;
   lines.forEach((line: string) => {
     doc.text(line, x, currentY);
@@ -53,12 +53,12 @@ function drawDocHeader(doc: jsPDF, title: string, shipment: ImportShipment, docN
 
   doc.setFont("helvetica", "normal");
   doc.setTextColor(15, 23, 42);
-  doc.text(shipment.referenceNo || "—", 38, 30);
-  doc.text(shipment.customer || "—", 92, 30);
+  doc.text(shipment.referenceNo || "-", 38, 30);
+  doc.text(shipment.customer || "-", 92, 30);
   if (docNo) {
     doc.text(docNo, 166, 30);
   } else {
-    doc.text(shipment.expectedArrivalDate ? new Date(shipment.expectedArrivalDate).toLocaleDateString() : "—", 172, 30);
+    doc.text(shipment.expectedArrivalDate ? new Date(shipment.expectedArrivalDate).toLocaleDateString() : "-", 172, 30);
   }
 
   // Line separating header metadata
@@ -77,306 +77,294 @@ function drawFooter(doc: jsPDF, pageNum: number) {
   doc.text(`Page ${pageNum}`, 185, 285);
 }
 
-// ─── 1. DRAFT BL PDF ──────────────────────────────────────────────
+
+type BillOfLadingData = {
+  documentNo: string;
+  documentTitle: string;
+  documentCopyLabel: string;
+  bookingNo?: string;
+  serviceContract?: string;
+  shippingLine?: string;
+  forwarderReference?: string;
+  vessel?: string;
+  voyage?: string;
+  placeOfReceipt?: string;
+  pol?: string;
+  pod?: string;
+  placeOfDelivery?: string;
+  shipper?: string;
+  consignee?: string;
+  notifyParty?: string;
+  deliveryAgent?: string;
+  marksAndNumbers?: string;
+  cargoDescription?: string;
+  hsCode?: string;
+  packages?: number;
+  grossWeight?: number;
+  netWeight?: number;
+  cbm?: number;
+  containers?: ContainerRow[];
+  freightTerms?: string;
+  freightCharges?: string;
+  countryOfOrigin?: string;
+  placeOfIssue?: string;
+  issueDate?: string;
+  onBoardDate?: string;
+};
+
+const EMPTY = "-";
+const PAGE = { left: 10, top: 10, width: 190, height: 277 };
+
+function clean(value: unknown): string {
+  if (value === null || value === undefined || value === "") return EMPTY;
+  return String(value);
+}
+
+function money(value: number | undefined): string {
+  return Number(value || 0).toLocaleString();
+}
+
+function writeWrapped(doc: jsPDF, text: string, x: number, y: number, width: number, lineHeight = 4, maxLines = 6) {
+  const lines = doc.splitTextToSize(clean(text), width).slice(0, maxLines);
+  lines.forEach((line: string, index: number) => doc.text(line, x, y + index * lineHeight));
+}
+
+function label(doc: jsPDF, text: string, x: number, y: number) {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.8);
+  doc.setTextColor(80, 92, 112);
+  doc.text(text.toUpperCase(), x, y);
+}
+
+function valueText(doc: jsPDF, text: string, x: number, y: number, width: number, maxLines = 3) {
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(20, 29, 43);
+  writeWrapped(doc, text, x, y, width, 3.7, maxLines);
+}
+
+function blCell(doc: jsPDF, x: number, y: number, w: number, h: number, title: string, body: string, maxLines = 4) {
+  doc.setDrawColor(40, 48, 64);
+  doc.setLineWidth(0.18);
+  doc.rect(x, y, w, h);
+  label(doc, title, x + 2, y + 4);
+  valueText(doc, body, x + 2, y + 9, w - 4, maxLines);
+}
+
+function drawBlHeader(doc: jsPDF, shipment: ImportShipment, data: BillOfLadingData) {
+  doc.setDrawColor(20, 29, 43);
+  doc.setLineWidth(0.45);
+  doc.rect(PAGE.left, PAGE.top, PAGE.width, PAGE.height);
+
+  doc.setDrawColor(20, 29, 43);
+  doc.line(10, 34, 200, 34);
+  doc.line(55, 10, 55, 34);
+  doc.line(154, 10, 154, 34);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(17);
+  doc.setTextColor(20, 29, 43);
+  doc.text("B2B", 20, 22);
+  doc.setFontSize(6.5);
+  doc.text("GLOBAL SUPPLIES", 17, 28);
+
+  doc.setFontSize(13);
+  doc.text(data.documentTitle.toUpperCase(), 60, 20);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.text("FOR OCEAN TRANSPORT OR MULTIMODAL TRANSPORT", 60, 27);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(data.documentCopyLabel.toUpperCase(), 159, 19);
+  doc.setFontSize(7);
+  doc.text(`REF ${shipment.referenceNo || EMPTY}`, 159, 27);
+}
+
+function drawBillOfLadingPdf(shipment: ImportShipment, data: BillOfLadingData) {
+  const doc = new jsPDF();
+  drawBlHeader(doc, shipment, data);
+
+  let y = 34;
+  blCell(doc, 10, y, 95, 24, "Shipper / Exporter", clean(data.shipper), 5);
+  blCell(doc, 105, y, 49, 12, "Booking No.", clean(data.bookingNo), 1);
+  blCell(doc, 154, y, 46, 12, "B/L No.", clean(data.documentNo), 1);
+  blCell(doc, 105, y + 12, 49, 12, "Service / Forwarder Ref.", clean(data.serviceContract || data.forwarderReference), 1);
+  blCell(doc, 154, y + 12, 46, 12, "Shipping Line", clean(data.shippingLine), 1);
+
+  y += 24;
+  blCell(doc, 10, y, 95, 25, "Consignee", clean(data.consignee), 5);
+  blCell(doc, 105, y, 95, 25, "Notify Party", clean(data.notifyParty), 5);
+
+  y += 25;
+  blCell(doc, 10, y, 47.5, 15, "Place of Receipt", clean(data.placeOfReceipt), 2);
+  blCell(doc, 57.5, y, 47.5, 15, "Vessel / Voyage", `${clean(data.vessel)} / ${clean(data.voyage)}`, 2);
+  blCell(doc, 105, y, 47.5, 15, "Port of Loading", clean(data.pol), 2);
+  blCell(doc, 152.5, y, 47.5, 15, "Port of Discharge", clean(data.pod), 2);
+
+  y += 15;
+  blCell(doc, 10, y, 95, 14, "Place of Delivery", clean(data.placeOfDelivery), 2);
+  blCell(doc, 105, y, 95, 14, "Delivery Agent / Final Destination", clean(data.deliveryAgent || data.placeOfDelivery), 2);
+
+  y += 14;
+  doc.setDrawColor(20, 29, 43);
+  doc.rect(10, y, 190, 72);
+  doc.line(10, y + 10, 200, y + 10);
+  doc.line(45, y, 45, y + 72);
+  doc.line(128, y, 128, y + 72);
+  doc.line(158, y, 158, y + 72);
+  doc.line(179, y, 179, y + 72);
+
+  label(doc, "Marks & Nos / Container / Seal", 12, y + 6);
+  label(doc, "Description of Packages and Goods", 47, y + 6);
+  label(doc, "Gross Weight", 130, y + 6);
+  label(doc, "Net Weight", 160, y + 6);
+  label(doc, "Measurement", 181, y + 6);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(20, 29, 43);
+  const containerLines = (data.containers || []).slice(0, 7).map((container) => (
+    `${container.containerNo || EMPTY} / ${container.sealNo || EMPTY} / ${container.size || EMPTY}`
+  ));
+  writeWrapped(doc, [clean(data.marksAndNumbers), ...containerLines].filter(Boolean).join("\n"), 12, y + 15, 31, 3.7, 13);
+
+  const description = [
+    clean(data.cargoDescription),
+    data.hsCode ? `HS CODE: ${data.hsCode}` : "",
+    data.packages ? `${data.packages} PACKAGES` : "",
+    data.freightTerms ? `FREIGHT: ${data.freightTerms}` : "",
+    data.countryOfOrigin ? `COUNTRY OF ORIGIN: ${data.countryOfOrigin}` : "",
+  ].filter(Boolean).join("\n");
+  writeWrapped(doc, description, 47, y + 15, 78, 3.8, 13);
+
+  doc.text(`${money(data.grossWeight)} KGS`, 130, y + 18);
+  doc.text(data.netWeight !== undefined ? `${money(data.netWeight)} KGS` : EMPTY, 160, y + 18);
+  doc.text(`${money(data.cbm)} CBM`, 181, y + 18);
+
+  y += 72;
+  blCell(doc, 10, y, 95, 22, "Freight & Charges", clean(data.freightCharges || data.freightTerms), 3);
+  blCell(doc, 105, y, 31.5, 22, "Place of Issue", clean(data.placeOfIssue || data.pol), 2);
+  blCell(doc, 136.5, y, 31.5, 22, "Issue Date", clean(data.issueDate || data.onBoardDate), 2);
+  blCell(doc, 168, y, 32, 22, "On Board Date", clean(data.onBoardDate), 2);
+
+  y += 22;
+  doc.rect(10, y, 190, 38);
+  label(doc, "Carrier Receipt / Terms", 12, y + 5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(40, 48, 64);
+  writeWrapped(
+    doc,
+    "Received by the carrier from the shipper in apparent good order and condition unless otherwise stated. Particulars above are furnished by shipper and carrier is not responsible for their accuracy. Subject to terms and conditions on reverse.",
+    12,
+    y + 11,
+    118,
+    3.5,
+    6,
+  );
+  doc.line(140, y + 25, 190, y + 25);
+  doc.setFont("helvetica", "bold");
+  doc.text("Signed for the Carrier", 148, y + 31);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("FIRST ORIGINAL", 12, 278);
+  doc.setFont("helvetica", "normal");
+  doc.text("This computer generated document does not need any signature unless required by carrier.", 64, 278);
+
+  return doc.output("blob");
+}// ─── 1. DRAFT BL PDF ──────────────────────────────────────────────
 export function generateDraftBLPdf(draftBL: DraftBL, shipment: ImportShipment) {
-  const doc = new jsPDF();
-  drawDocHeader(doc, "Draft Bill of Lading", shipment, draftBL.draftBlNo);
-
-  // Main Details Block
-  let y = 40;
-  drawBox(doc, 15, y, 90, 24, "Carrier Details");
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(`Booking No: ${draftBL.bookingNo || "—"}`, 18, y + 11);
-  doc.text(`Vessel / Voyage: ${draftBL.vessel || "—"} / ${draftBL.voyage || "—"}`, 18, y + 18);
-
-  drawBox(doc, 105, y, 90, 24, "Routing Details");
-  doc.text(`POL: ${draftBL.pol || "—"}`, 108, y + 11);
-  doc.text(`POD: ${draftBL.pod || "—"}`, 108, y + 18);
-  doc.text(`Place of Delivery: ${draftBL.placeOfDelivery || "—"}`, 108, y + 25);
-
-  y += 29;
-
-  // Parties Grid
-  drawBox(doc, 15, y, 60, 48, "Shipper / Exporter");
-  drawWrappedText(doc, draftBL.shipper, 18, y + 10, 54);
-
-  drawBox(doc, 75, y, 60, 48, "Consignee / Importer");
-  drawWrappedText(doc, draftBL.consignee, 78, y + 10, 54);
-
-  drawBox(doc, 135, y, 60, 48, "Notify Party");
-  drawWrappedText(doc, draftBL.notifyParty, 138, y + 10, 54);
-
-  y += 53;
-
-  // Cargo Details
-  drawBox(doc, 15, y, 180, 30, "Cargo & Goods Description");
-  drawWrappedText(doc, draftBL.cargoDescription, 18, y + 10, 174);
-  doc.setFont("helvetica", "bold");
-  doc.text(`HS Code: ${draftBL.hsCode || "—"}`, 18, y + 26);
-  doc.text(`Freight Terms: ${draftBL.freightTerms || "—"}`, 100, y + 26);
-
-  y += 35;
-
-  // Cargo Summary Block
-  drawBox(doc, 15, y, 180, 16, "Measurements Summary");
-  doc.setFont("helvetica", "bold");
-  doc.text("Total Packages", 18, y + 9);
-  doc.text("Gross Weight", 65, y + 9);
-  doc.text("Net Weight", 110, y + 9);
-  doc.text("Total CBM", 155, y + 9);
-
-  doc.setFont("helvetica", "normal");
-  doc.text(String(draftBL.packages || 0), 18, y + 14);
-  doc.text(`${draftBL.grossWeight || 0} kg`, 65, y + 14);
-  doc.text(`${draftBL.netWeight || 0} kg`, 110, y + 14);
-  doc.text(`${draftBL.cbm || 0} cbm`, 155, y + 14);
-
-  y += 21;
-
-  // Containers List
-  drawBox(doc, 15, y, 180, 50, "Containers Details");
-  doc.setFont("helvetica", "bold");
-  doc.text("Container No", 18, y + 9);
-  doc.text("Size", 60, y + 9);
-  doc.text("Seal No", 80, y + 9);
-  doc.text("Packages", 115, y + 9);
-  doc.text("Gross Wt (kg)", 138, y + 9);
-  doc.text("CBM", 168, y + 9);
-
-  doc.line(15, y + 11, 195, y + 11);
-  doc.setFont("helvetica", "normal");
-  let contY = y + 16;
-  (draftBL.containers || []).forEach((c, idx) => {
-    if (idx < 5) {
-      doc.text(c.containerNo || "—", 18, contY);
-      doc.text(c.size || "—", 60, contY);
-      doc.text(c.sealNo || "—", 80, contY);
-      doc.text(String(c.packages || 0), 115, contY);
-      doc.text(String(c.grossWeight || 0), 138, contY);
-      doc.text(String(c.cbm || 0), 168, contY);
-      contY += 6;
-    }
+  return drawBillOfLadingPdf(shipment, {
+    documentNo: draftBL.draftBlNo,
+    documentTitle: "Draft Bill of Lading",
+    documentCopyLabel: "Draft Copy",
+    bookingNo: draftBL.bookingNo,
+    vessel: draftBL.vessel,
+    voyage: draftBL.voyage,
+    pol: draftBL.pol,
+    pod: draftBL.pod,
+    placeOfDelivery: draftBL.placeOfDelivery,
+    shipper: draftBL.shipper,
+    consignee: draftBL.consignee,
+    notifyParty: draftBL.notifyParty,
+    cargoDescription: draftBL.cargoDescription,
+    hsCode: draftBL.hsCode,
+    packages: draftBL.packages,
+    grossWeight: draftBL.grossWeight,
+    netWeight: draftBL.netWeight,
+    cbm: draftBL.cbm,
+    containers: draftBL.containers,
+    freightTerms: draftBL.freightTerms,
+    issueDate: draftBL.draftDate,
+    onBoardDate: draftBL.onBoardDate,
   });
-
-  y += 55;
-
-  // Dates
-  doc.setFont("helvetica", "bold");
-  doc.text(`Draft Date: ${draftBL.draftDate || "—"}`, 15, y);
-  doc.text(`On Board Date: ${draftBL.onBoardDate || "—"}`, 105, y);
-
-  drawFooter(doc, 1);
-  return doc.output("blob");
 }
 
-// ─── 2. HOUSE BL PDF ──────────────────────────────────────────────
 export function generateHouseBLPdf(houseBL: HouseBL, shipment: ImportShipment) {
-  const doc = new jsPDF();
-  drawDocHeader(doc, "House Bill of Lading", shipment, houseBL.hblNumber);
-
-  let y = 40;
-  drawBox(doc, 15, y, 90, 24, "Carrier & HBL Info");
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(`Booking No: ${houseBL.bookingNumber || "—"}`, 18, y + 11);
-  doc.text(`Service Contract: ${houseBL.serviceContract || "—"}`, 18, y + 18);
-
-  drawBox(doc, 105, y, 90, 24, "Vessel & Voyage Details");
-  doc.text(`Vessel / Voyage: ${houseBL.vessel || "—"} / ${houseBL.voyage || "—"}`, 108, y + 11);
-
-  y += 29;
-
-  // Routing
-  drawBox(doc, 15, y, 180, 20, "Routing Details");
-  doc.text(`Place of Receipt: ${houseBL.placeOfReceipt || "—"}`, 18, y + 9);
-  doc.text(`Port of Loading (POL): ${houseBL.pol || "—"}`, 18, y + 16);
-  doc.text(`Port of Discharge (POD): ${houseBL.pod || "—"}`, 108, y + 9);
-  doc.text(`Place of Delivery: ${houseBL.placeOfDelivery || "—"}`, 108, y + 16);
-
-  y += 25;
-
-  // Parties Grid
-  drawBox(doc, 15, y, 90, 36, "Shipper / Exporter");
-  drawWrappedText(doc, houseBL.shipper, 18, y + 10, 84);
-
-  drawBox(doc, 105, y, 90, 36, "Consignee / Importer");
-  drawWrappedText(doc, houseBL.consignee, 108, y + 10, 84);
-
-  y += 40;
-
-  drawBox(doc, 15, y, 90, 36, "Notify Party");
-  drawWrappedText(doc, houseBL.notifyParty, 18, y + 10, 84);
-
-  drawBox(doc, 105, y, 90, 36, "Delivery Agent");
-  drawWrappedText(doc, houseBL.deliveryAgent, 108, y + 10, 84);
-
-  y += 41;
-
-  // Cargo details
-  drawBox(doc, 15, y, 180, 30, "Cargo Details");
-  doc.setFont("helvetica", "bold");
-  doc.text(`Marks & Numbers: ${houseBL.marksAndNumbers || "—"}`, 18, y + 9);
-  doc.setFont("helvetica", "normal");
-  drawWrappedText(doc, houseBL.cargoDescription, 18, y + 15, 174);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Freight Terms: ${houseBL.freightTerms || "—"}`, 18, y + 27);
-
-  y += 35;
-
-  // Measurements Summary Block
-  drawBox(doc, 15, y, 180, 16, "Measurements Summary");
-  doc.setFont("helvetica", "bold");
-  doc.text("Total Packages", 18, y + 9);
-  doc.text("Gross Weight", 65, y + 9);
-  doc.text("Net Weight", 110, y + 9);
-  doc.text("Total CBM", 155, y + 9);
-
-  doc.setFont("helvetica", "normal");
-  doc.text(String(houseBL.packages || 0), 18, y + 14);
-  doc.text(`${houseBL.grossWeight || 0} kg`, 65, y + 14);
-  doc.text(`${houseBL.netWeight || 0} kg`, 110, y + 14);
-  doc.text(`${houseBL.cbm || 0} cbm`, 155, y + 14);
-
-  y += 21;
-
-  // Containers List
-  drawBox(doc, 15, y, 180, 38, "Containers Details");
-  doc.setFont("helvetica", "bold");
-  doc.text("Container No", 18, y + 9);
-  doc.text("Size", 60, y + 9);
-  doc.text("Seal No", 80, y + 9);
-  doc.text("Packages", 115, y + 9);
-  doc.text("Gross Wt (kg)", 138, y + 9);
-  doc.text("CBM", 168, y + 9);
-
-  doc.line(15, y + 11, 195, y + 11);
-  doc.setFont("helvetica", "normal");
-  let hcontY = y + 15;
-  (houseBL.containers || []).forEach((c, idx) => {
-    if (idx < 3) {
-      doc.text(c.containerNo || "—", 18, hcontY);
-      doc.text(c.size || "—", 60, hcontY);
-      doc.text(c.sealNo || "—", 80, hcontY);
-      doc.text(String(c.packages || 0), 115, hcontY);
-      doc.text(String(c.grossWeight || 0), 138, hcontY);
-      doc.text(String(c.cbm || 0), 168, hcontY);
-      hcontY += 6;
-    }
+  return drawBillOfLadingPdf(shipment, {
+    documentNo: houseBL.hblNumber,
+    documentTitle: "House Bill of Lading",
+    documentCopyLabel: "Original",
+    bookingNo: houseBL.bookingNumber,
+    serviceContract: houseBL.serviceContract,
+    vessel: houseBL.vessel,
+    voyage: houseBL.voyage,
+    placeOfReceipt: houseBL.placeOfReceipt,
+    pol: houseBL.pol,
+    pod: houseBL.pod,
+    placeOfDelivery: houseBL.placeOfDelivery,
+    shipper: houseBL.shipper,
+    consignee: houseBL.consignee,
+    notifyParty: houseBL.notifyParty,
+    deliveryAgent: houseBL.deliveryAgent,
+    marksAndNumbers: houseBL.marksAndNumbers,
+    cargoDescription: houseBL.cargoDescription,
+    packages: houseBL.packages,
+    grossWeight: houseBL.grossWeight,
+    netWeight: houseBL.netWeight,
+    cbm: houseBL.cbm,
+    containers: houseBL.containers,
+    freightTerms: houseBL.freightTerms,
+    placeOfIssue: houseBL.placeOfIssue,
+    issueDate: houseBL.issueDate,
+    onBoardDate: houseBL.onBoardDate,
   });
-
-  y += 42;
-
-  // Issue details
-  doc.setFont("helvetica", "bold");
-  doc.text(`Place of Issue: ${houseBL.placeOfIssue || "—"}`, 15, y);
-  doc.text(`Issue Date: ${houseBL.issueDate || "—"}`, 75, y);
-  doc.text(`On Board Date: ${houseBL.onBoardDate || "—"}`, 135, y);
-
-  drawFooter(doc, 1);
-  return doc.output("blob");
 }
 
-// ─── 3. MASTER BL PDF ─────────────────────────────────────────────
 export function generateMasterBLPdf(masterBL: MasterBL, shipment: ImportShipment) {
-  const doc = new jsPDF();
-  drawDocHeader(doc, "Master Bill of Lading", shipment, masterBL.mblNumber);
-
-  let y = 40;
-  drawBox(doc, 15, y, 90, 24, "MBL Details");
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(`Booking Number: ${masterBL.bookingNumber || "—"}`, 18, y + 11);
-  doc.text(`Shipping Line: ${masterBL.shippingLine || "—"}`, 18, y + 18);
-
-  drawBox(doc, 105, y, 90, 24, "Vessel & Voyage Details");
-  doc.text(`Vessel / Voyage: ${masterBL.vessel || "—"} / ${masterBL.voyage || "—"}`, 108, y + 11);
-  doc.text(`Forwarder Ref: ${masterBL.forwarderReference || "—"}`, 108, y + 18);
-
-  y += 29;
-
-  // Routing
-  drawBox(doc, 15, y, 180, 20, "Routing Details");
-  doc.text(`Place of Receipt: ${masterBL.placeOfReceipt || "—"}`, 18, y + 9);
-  doc.text(`Port of Loading (POL): ${masterBL.pol || "—"}`, 18, y + 16);
-  doc.text(`Port of Discharge (POD): ${masterBL.pod || "—"}`, 108, y + 9);
-  doc.text(`Place of Delivery: ${masterBL.placeOfDelivery || "—"}`, 108, y + 16);
-
-  y += 25;
-
-  // Parties Grid
-  drawBox(doc, 15, y, 60, 48, "Shipper");
-  drawWrappedText(doc, masterBL.shipper, 18, y + 10, 54);
-
-  drawBox(doc, 75, y, 60, 48, "Consignee");
-  drawWrappedText(doc, masterBL.consignee, 78, y + 10, 54);
-
-  drawBox(doc, 135, y, 60, 48, "Notify Party");
-  drawWrappedText(doc, masterBL.notifyParty, 138, y + 10, 54);
-
-  y += 53;
-
-  // Cargo & details
-  drawBox(doc, 15, y, 180, 30, "Cargo Details");
-  drawWrappedText(doc, masterBL.cargoDescription, 18, y + 10, 174);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Freight Terms / Charges: ${masterBL.freightTerms || "—"} / ${masterBL.freightCharges || "—"}`, 18, y + 27);
-  doc.text(`Country of Origin: ${masterBL.countryOfOrigin || "—"}`, 120, y + 27);
-
-  y += 35;
-
-  // Measurements Summary Block
-  drawBox(doc, 15, y, 180, 16, "Measurements Summary");
-  doc.setFont("helvetica", "bold");
-  doc.text("Total Packages", 18, y + 9);
-  doc.text("Gross Weight", 70, y + 9);
-  doc.text("Total CBM", 130, y + 9);
-
-  doc.setFont("helvetica", "normal");
-  doc.text(String(masterBL.packages || 0), 18, y + 14);
-  doc.text(`${masterBL.grossWeight || 0} kg`, 70, y + 14);
-  doc.text(`${masterBL.cbm || 0} cbm`, 130, y + 14);
-
-  y += 21;
-
-  // Containers List
-  drawBox(doc, 15, y, 180, 38, "Containers Details");
-  doc.setFont("helvetica", "bold");
-  doc.text("Container No", 18, y + 9);
-  doc.text("Size", 60, y + 9);
-  doc.text("Seal No", 80, y + 9);
-  doc.text("Packages", 115, y + 9);
-  doc.text("Gross Wt (kg)", 138, y + 9);
-  doc.text("CBM", 168, y + 9);
-
-  doc.line(15, y + 11, 195, y + 11);
-  doc.setFont("helvetica", "normal");
-  let mcontY = y + 15;
-  (masterBL.containers || []).forEach((c, idx) => {
-    if (idx < 3) {
-      doc.text(c.containerNo || "—", 18, mcontY);
-      doc.text(c.size || "—", 60, mcontY);
-      doc.text(c.sealNo || "—", 80, mcontY);
-      doc.text(String(c.packages || 0), 115, mcontY);
-      doc.text(String(c.grossWeight || 0), 138, mcontY);
-      doc.text(String(c.cbm || 0), 168, mcontY);
-      mcontY += 6;
-    }
+  return drawBillOfLadingPdf(shipment, {
+    documentNo: masterBL.mblNumber,
+    documentTitle: "Non-Negotiable Sea Waybill",
+    documentCopyLabel: "Original",
+    bookingNo: masterBL.bookingNumber,
+    shippingLine: masterBL.shippingLine,
+    forwarderReference: masterBL.forwarderReference,
+    vessel: masterBL.vessel,
+    voyage: masterBL.voyage,
+    placeOfReceipt: masterBL.placeOfReceipt,
+    pol: masterBL.pol,
+    pod: masterBL.pod,
+    placeOfDelivery: masterBL.placeOfDelivery,
+    shipper: masterBL.shipper,
+    consignee: masterBL.consignee,
+    notifyParty: masterBL.notifyParty,
+    cargoDescription: masterBL.cargoDescription,
+    packages: masterBL.packages,
+    grossWeight: masterBL.grossWeight,
+    cbm: masterBL.cbm,
+    containers: masterBL.containers,
+    freightTerms: masterBL.freightTerms,
+    freightCharges: masterBL.freightCharges,
+    countryOfOrigin: masterBL.countryOfOrigin,
+    placeOfIssue: masterBL.placeOfIssue,
+    issueDate: masterBL.issueDate,
+    onBoardDate: masterBL.onBoardDate,
   });
-
-  y += 42;
-
-  // Issue details
-  doc.setFont("helvetica", "bold");
-  doc.text(`Place of Issue: ${masterBL.placeOfIssue || "—"}`, 15, y);
-  doc.text(`Issue Date: ${masterBL.issueDate || "—"}`, 75, y);
-  doc.text(`On Board Date: ${masterBL.onBoardDate || "—"}`, 135, y);
-
-  drawFooter(doc, 1);
-  return doc.output("blob");
 }
 
-// ─── 4. FREIGHT INVOICE PDF ───────────────────────────────────────
+// 4. FREIGHT INVOICE PDF
 export function generateInvoicePdf(invoice: ImportClearingInvoice, shipment: ImportShipment) {
   const doc = new jsPDF();
   drawDocHeader(doc, "Freight Invoice", shipment, invoice.invoiceNumber);
@@ -386,27 +374,27 @@ export function generateInvoicePdf(invoice: ImportClearingInvoice, shipment: Imp
   drawBox(doc, 15, y, 90, 24, "Invoice Details");
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text(`Invoice No: ${invoice.invoiceNumber || "—"}`, 18, y + 11);
-  doc.text(`Invoice Date: ${invoice.invoiceDate || "—"}`, 18, y + 18);
+  doc.text(`Invoice No: ${invoice.invoiceNumber || "-"}`, 18, y + 11);
+  doc.text(`Invoice Date: ${invoice.invoiceDate || "-"}`, 18, y + 18);
 
   drawBox(doc, 105, y, 90, 24, "Customer Details");
-  doc.text(`Billing To: ${invoice.customer || "—"}`, 108, y + 11);
-  doc.text(`NTN Number: ${invoice.ntn || "—"}`, 108, y + 18);
+  doc.text(`Billing To: ${invoice.customer || "-"}`, 108, y + 11);
+  doc.text(`NTN Number: ${invoice.ntn || "-"}`, 108, y + 18);
 
   y += 29;
 
   // Reference Shipment Details
   drawBox(doc, 15, y, 180, 36, "Shipment Reference Information (Read-Only)");
   doc.setFont("helvetica", "normal");
-  doc.text(`HBL No: ${invoice.hblNumber || "—"}`, 18, y + 9);
-  doc.text(`MBL No: ${invoice.mblNumber || "—"}`, 18, y + 16);
-  doc.text(`Vessel / Voyage: ${invoice.vessel || "—"} ${invoice.voyage || "—"}`, 18, y + 23);
-  doc.text(`Container Summary: ${invoice.containerNumber || "—"} (${invoice.containerType || "—"})`, 18, y + 30);
+  doc.text(`HBL No: ${invoice.hblNumber || "-"}`, 18, y + 9);
+  doc.text(`MBL No: ${invoice.mblNumber || "-"}`, 18, y + 16);
+  doc.text(`Vessel / Voyage: ${invoice.vessel || "-"} ${invoice.voyage || "-"}`, 18, y + 23);
+  doc.text(`Container Summary: ${invoice.containerNumber || "-"} (${invoice.containerType || "-"})`, 18, y + 30);
 
-  doc.text(`Shipping Line: ${invoice.shippingLine || "—"}`, 108, y + 9);
-  doc.text(`POL / POD: ${invoice.pol || "—"} / ${invoice.pod || "—"}`, 108, y + 16);
-  doc.text(`Destination: ${invoice.destination || "—"}`, 108, y + 23);
-  doc.text(`Clearing Agent: ${invoice.clearingAgent || "—"}`, 108, y + 30);
+  doc.text(`Shipping Line: ${invoice.shippingLine || "-"}`, 108, y + 9);
+  doc.text(`POL / POD: ${invoice.pol || "-"} / ${invoice.pod || "-"}`, 108, y + 16);
+  doc.text(`Destination: ${invoice.destination || "-"}`, 108, y + 23);
+  doc.text(`Clearing Agent: ${invoice.clearingAgent || "-"}`, 108, y + 30);
 
   y += 41;
 
@@ -453,7 +441,7 @@ export function generateInvoicePdf(invoice: ImportClearingInvoice, shipment: Imp
 
   // Amount in Words
   drawBox(doc, 15, y, 180, 16, "Amount in Words");
-  drawWrappedText(doc, invoice.amountInWords || "—", 18, y + 10, 174);
+  drawWrappedText(doc, invoice.amountInWords || "-", 18, y + 10, 174);
 
   drawFooter(doc, 1);
   return doc.output("blob");
@@ -476,9 +464,9 @@ export function generateReceiptPdf(receipt: ImportPaymentReceipt, shipment: Impo
   doc.text("Amount Received:", 18, y + 52);
 
   doc.setFont("helvetica", "normal");
-  doc.text(receipt.receiptNo || "—", 70, y + 12);
-  doc.text(receipt.tid || "—", 70, y + 22);
-  doc.text(receipt.paymentDate || "—", 70, y + 32);
+  doc.text(receipt.receiptNo || "-", 70, y + 12);
+  doc.text(receipt.tid || "-", 70, y + 22);
+  doc.text(receipt.paymentDate || "-", 70, y + 32);
   doc.text("COMPLETED / PAID", 70, y + 42);
   
   doc.setFont("helvetica", "bold");
@@ -489,9 +477,9 @@ export function generateReceiptPdf(receipt: ImportPaymentReceipt, shipment: Impo
   // Freight reference
   drawBox(doc, 15, y, 180, 36, "Freight References");
   doc.setFont("helvetica", "normal");
-  doc.text(`Freight Invoice Ref: ${shipment.clearingInvoice?.invoiceNumber || "—"}`, 18, y + 12);
-  doc.text(`Billing Customer: ${shipment.customer || "—"}`, 18, y + 22);
-  doc.text(`Reference No: ${shipment.referenceNo || "—"}`, 18, y + 32);
+  doc.text(`Freight Invoice Ref: ${shipment.clearingInvoice?.invoiceNumber || "-"}`, 18, y + 12);
+  doc.text(`Billing Customer: ${shipment.customer || "-"}`, 18, y + 22);
+  doc.text(`Reference No: ${shipment.referenceNo || "-"}`, 18, y + 32);
 
   y += 50;
 
@@ -513,8 +501,8 @@ export function generateDetentionPdf(detention: DetentionInvoice, shipment: Impo
   drawBox(doc, 15, y, 90, 36, "Detention Periods");
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text(`Detention Start: ${detention.detentionStart || "—"}`, 18, y + 11);
-  doc.text(`Detention End: ${detention.detentionEnd || "—"}`, 18, y + 18);
+  doc.text(`Detention Start: ${detention.detentionStart || "-"}`, 18, y + 11);
+  doc.text(`Detention End: ${detention.detentionEnd || "-"}`, 18, y + 18);
   doc.text(`Free Days Allowed: ${detention.freeDays || 0} Days`, 18, y + 25);
   doc.setFont("helvetica", "bold");
   doc.text(`Chargeable Days: ${detention.chargeableDays || 0} Days`, 18, y + 32);
@@ -548,9 +536,9 @@ export function generateDetentionPdf(detention: DetentionInvoice, shipment: Impo
   let detcontY = y + 16;
   (sourceDoc?.containers || []).forEach((c, idx) => {
     if (idx < 5) {
-      doc.text(c.containerNo || "—", 18, detcontY);
-      doc.text(c.size || "—", 60, detcontY);
-      doc.text(c.sealNo || "—", 80, detcontY);
+      doc.text(c.containerNo || "-", 18, detcontY);
+      doc.text(c.size || "-", 60, detcontY);
+      doc.text(c.sealNo || "-", 80, detcontY);
       doc.text(String(c.packages || 0), 115, detcontY);
       doc.text(String(c.grossWeight || 0), 138, detcontY);
       detcontY += 6;

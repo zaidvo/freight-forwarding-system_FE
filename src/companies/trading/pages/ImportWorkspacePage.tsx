@@ -6,7 +6,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useImportStore } from "../store/importStore";
 import WorkflowTimeline from "../components/import/WorkflowTimeline";
-import { downloadImportPdf } from "../services/tradingImportService";
 
 export default function ImportWorkspacePage() {
   const { id } = useParams<{ id: string }>();
@@ -63,39 +62,24 @@ export default function ImportWorkspacePage() {
     try {
       // 1. Draft BL
       if (shipment.draftBL) {
-        let blob: Blob;
-        if (shipment.draftBL.pdf) {
-          blob = await downloadImportPdf(shipment.id, "draftBL");
-        } else {
-          const { generateDraftBLPdf } = await import("../utils/pdfGenerator");
-          blob = generateDraftBLPdf(shipment.draftBL, shipment);
-        }
+        const { generateDraftBLPdf } = await import("../utils/pdfGenerator");
+        const blob = generateDraftBLPdf(shipment.draftBL, shipment);
         triggerDownload(blob, `Draft_BL_${shipment.referenceNo}.pdf`);
         await delay(800);
       }
 
       // 2. House BL
       if (shipment.houseBL) {
-        let blob: Blob;
-        if (shipment.houseBL.pdf) {
-          blob = await downloadImportPdf(shipment.id, "houseBL");
-        } else {
-          const { generateHouseBLPdf } = await import("../utils/pdfGenerator");
-          blob = generateHouseBLPdf(shipment.houseBL, shipment);
-        }
+        const { generateHouseBLPdf } = await import("../utils/pdfGenerator");
+        const blob = generateHouseBLPdf(shipment.houseBL, shipment);
         triggerDownload(blob, `House_BL_${shipment.referenceNo}.pdf`);
         await delay(800);
       }
 
       // 3. Master BL
       if (shipment.masterBL) {
-        let blob: Blob;
-        if (shipment.masterBL.pdf) {
-          blob = await downloadImportPdf(shipment.id, "masterBL");
-        } else {
-          const { generateMasterBLPdf } = await import("../utils/pdfGenerator");
-          blob = generateMasterBLPdf(shipment.masterBL, shipment);
-        }
+        const { generateMasterBLPdf } = await import("../utils/pdfGenerator");
+        const blob = generateMasterBLPdf(shipment.masterBL, shipment);
         triggerDownload(blob, `Master_BL_${shipment.referenceNo}.pdf`);
         await delay(800);
       }
