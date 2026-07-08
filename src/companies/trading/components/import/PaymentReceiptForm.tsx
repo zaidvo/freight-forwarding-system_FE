@@ -1,3 +1,5 @@
+// src/companies/trading/components/import/PaymentReceiptForm.tsx
+
 import { useEffect, useState } from "react";
 import { ArrowLeft, CreditCard, Save } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -26,6 +28,8 @@ export default function PaymentReceiptForm() {
     paymentDate: existing?.paymentDate ?? new Date().toISOString().slice(0, 10),
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (!shipment) void loadShipments();
   }, [shipment, loadShipments]);
@@ -43,7 +47,23 @@ export default function PaymentReceiptForm() {
   const set = (field: string, value: string | number) =>
     setForm((current) => ({ ...current, [field]: value }));
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.receiptNo.trim()) newErrors.receiptNo = "Receipt Number is required";
+    if (!form.tid.trim()) newErrors.tid = "TID is required";
+    if (form.amount <= 0) newErrors.amount = "Amount must be greater than 0";
+    if (!form.currency.trim()) newErrors.currency = "Currency is required";
+    if (!form.paymentDate.trim()) newErrors.paymentDate = "Payment Date is required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
+    if (!validateForm()) {
+      alert("Please fill in all mandatory fields before saving receipt.");
+      return;
+    }
     await savePaymentReceipt(id!, form as Omit<ImportPaymentReceipt, "id" | "shipmentId" | "status" | "audit">);
     navigate(`/trading/imports/${id}`);
   };
@@ -105,28 +125,65 @@ export default function PaymentReceiptForm() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelClasses}>Receipt No</label>
-                <input className={inputClasses} value={form.receiptNo} onChange={(event) => set("receiptNo", event.target.value)} />
+                <input
+                  className={`${inputClasses} ${errors.receiptNo ? "border-red-500 focus:ring-red-100" : ""}`}
+                  value={form.receiptNo}
+                  onChange={(event) => {
+                    set("receiptNo", event.target.value);
+                    if (errors.receiptNo) setErrors(prev => ({ ...prev, receiptNo: "" }));
+                  }}
+                />
+                {errors.receiptNo && <p className="text-red-500 text-[11px] mt-1">{errors.receiptNo}</p>}
               </div>
               <div>
                 <label className={labelClasses}>TID</label>
-                <input className={inputClasses} value={form.tid} onChange={(event) => set("tid", event.target.value)} />
+                <input
+                  className={`${inputClasses} ${errors.tid ? "border-red-500 focus:ring-red-100" : ""}`}
+                  value={form.tid}
+                  onChange={(event) => {
+                    set("tid", event.target.value);
+                    if (errors.tid) setErrors(prev => ({ ...prev, tid: "" }));
+                  }}
+                />
+                {errors.tid && <p className="text-red-500 text-[11px] mt-1">{errors.tid}</p>}
               </div>
               <div>
                 <label className={labelClasses}>Amount</label>
                 <input
                   type="number"
-                  className={inputClasses}
+                  className={`${inputClasses} ${errors.amount ? "border-red-500 focus:ring-red-100" : ""}`}
                   value={form.amount || ""}
-                  onChange={(event) => set("amount", Number(event.target.value) || 0)}
+                  onChange={(event) => {
+                    set("amount", Number(event.target.value) || 0);
+                    if (errors.amount) setErrors(prev => ({ ...prev, amount: "" }));
+                  }}
                 />
+                {errors.amount && <p className="text-red-500 text-[11px] mt-1">{errors.amount}</p>}
               </div>
               <div>
                 <label className={labelClasses}>Currency</label>
-                <input className={inputClasses} value={form.currency} onChange={(event) => set("currency", event.target.value)} />
+                <input
+                  className={`${inputClasses} ${errors.currency ? "border-red-500 focus:ring-red-100" : ""}`}
+                  value={form.currency}
+                  onChange={(event) => {
+                    set("currency", event.target.value);
+                    if (errors.currency) setErrors(prev => ({ ...prev, currency: "" }));
+                  }}
+                />
+                {errors.currency && <p className="text-red-500 text-[11px] mt-1">{errors.currency}</p>}
               </div>
               <div>
                 <label className={labelClasses}>Payment Date</label>
-                <input type="date" className={inputClasses} value={form.paymentDate} onChange={(event) => set("paymentDate", event.target.value)} />
+                <input
+                  type="date"
+                  className={`${inputClasses} ${errors.paymentDate ? "border-red-500 focus:ring-red-100" : ""}`}
+                  value={form.paymentDate}
+                  onChange={(event) => {
+                    set("paymentDate", event.target.value);
+                    if (errors.paymentDate) setErrors(prev => ({ ...prev, paymentDate: "" }));
+                  }}
+                />
+                {errors.paymentDate && <p className="text-red-500 text-[11px] mt-1">{errors.paymentDate}</p>}
               </div>
             </div>
           </div>

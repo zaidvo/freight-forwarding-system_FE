@@ -55,6 +55,7 @@ export default function MasterBLForm() {
     existing?.containers ?? hbl?.containers ?? [emptyContainer()]
   );
   const [pdf, setPdf] = useState<PdfAttachment | undefined>(existing?.pdf);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const set = (field: string, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -101,12 +102,38 @@ export default function MasterBLForm() {
     setForm((f) => ({ ...f, packages: totalPackages, grossWeight: totalGross, cbm: totalCbm }));
   }, [containers]);
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.shippingLine.trim()) newErrors.shippingLine = "Shipping Line is required";
+    if (!form.mblNumber.trim()) newErrors.mblNumber = "MBL Number is required";
+    if (!form.bookingNumber.trim()) newErrors.bookingNumber = "Booking Number is required";
+    if (!form.placeOfReceipt.trim()) newErrors.placeOfReceipt = "Place of Receipt is required";
+    if (!form.pol.trim()) newErrors.pol = "Port of Loading (POL) is required";
+    if (!form.pod.trim()) newErrors.pod = "Port of Discharge (POD) is required";
+    if (!form.placeOfDelivery.trim()) newErrors.placeOfDelivery = "Place of Delivery is required";
+    if (!form.vessel.trim()) newErrors.vessel = "Vessel is required";
+    if (!form.voyage.trim()) newErrors.voyage = "Voyage is required";
+    if (!form.shipper.trim()) newErrors.shipper = "Shipper details are required";
+    if (!form.consignee.trim()) newErrors.consignee = "Consignee details are required";
+    if (!form.notifyParty.trim()) newErrors.notifyParty = "Notify Party details are required";
+    if (!form.cargoDescription.trim()) newErrors.cargoDescription = "Cargo Description is required";
+    if (!form.freightTerms.trim()) newErrors.freightTerms = "Freight Terms is required";
+    if (!form.onBoardDate.trim()) newErrors.onBoardDate = "On Board Date is required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
     await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, false);
     navigate(`/trading/imports/${id}`);
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      alert("Please fill in all mandatory fields before submitting.");
+      return;
+    }
     await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, true);
     navigate(`/trading/imports/${id}`);
   };
@@ -141,32 +168,55 @@ export default function MasterBLForm() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button type="button" onClick={() => navigate(`/trading/imports/${id}`)} className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700">
+            <button
+              type="button"
+              onClick={() => navigate(`/trading/imports/${id}`)}
+              className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+            >
               <ArrowLeft className="h-4 w-4" />
             </button>
             <div>
               <div className="flex items-center gap-2">
                 <FilePlus className="h-5 w-5 text-indigo-500" />
-                <h1 className="text-[20px] font-bold tracking-tight text-slate-900">Master Bill of Lading</h1>
-                {existing && <DocumentStatusBadge status={existing.status} size="md" />}
+                <h1 className="text-[20px] font-bold tracking-tight text-slate-900">
+                  Master Bill of Lading
+                </h1>
+                {existing && (
+                  <DocumentStatusBadge status={existing.status} size="md" />
+                )}
               </div>
-              <p className="text-[13px] text-slate-500 mt-0.5">{shipment.referenceNo} • {shipment.customer}</p>
+              <p className="text-[13px] text-slate-500 mt-0.5">
+                {shipment.referenceNo} • {shipment.customer}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={handleSave} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50">
-              <Save className="h-4 w-4" /> Save Draft
+            <button
+              type="button"
+              onClick={handleSave}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50"
+            >
+              <Save className="h-4 w-4" />
+              Save Draft
             </button>
-            <button type="button" onClick={handleSubmit} className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(99,102,241,0.3)] transition hover:bg-indigo-600">
-              <Send className="h-4 w-4" /> Submit
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(99,102,241,0.3)] transition hover:bg-indigo-600"
+            >
+              <Send className="h-4 w-4" />
+              Submit
             </button>
           </div>
         </div>
 
+        {/* Auto-fill notice */}
         {hbl && !existing && (
           <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
             <Zap className="h-4 w-4 text-indigo-500 shrink-0" />
-            <p className="text-[13px] text-indigo-700"><span className="font-semibold">Auto-filled from House BL.</span> Common fields have been pre-populated.</p>
+            <p className="text-[13px] text-indigo-700">
+              <span className="font-semibold">Auto-filled from House BL.</span> Common fields have been pre-populated. Review and adjust as needed.
+            </p>
           </div>
         )}
 
@@ -176,10 +226,48 @@ export default function MasterBLForm() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h3 className="text-[14px] font-semibold text-slate-800 mb-4">MBL Details</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelClasses}>Shipping Line</label><input className={inputClasses} value={form.shippingLine} onChange={(e) => set("shippingLine", e.target.value)} placeholder="e.g. Maersk, MSC" /></div>
-                <div><label className={labelClasses}>MBL Number</label><input className={inputClasses} value={form.mblNumber} onChange={(e) => set("mblNumber", e.target.value)} /></div>
-                <div><label className={labelClasses}>Booking Number <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><input className={inputClasses} value={form.bookingNumber} onChange={(e) => set("bookingNumber", e.target.value)} /></div>
-                <div><label className={labelClasses}>Forwarder Reference</label><input className={inputClasses} value={form.forwarderReference} onChange={(e) => set("forwarderReference", e.target.value)} /></div>
+                <div>
+                  <label className={labelClasses}>Shipping Line</label>
+                  <input
+                    className={`${inputClasses} ${errors.shippingLine ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.shippingLine}
+                    onChange={(e) => {
+                      set("shippingLine", e.target.value);
+                      if (errors.shippingLine) setErrors(prev => ({ ...prev, shippingLine: "" }));
+                    }}
+                    placeholder="Shipping Line name"
+                  />
+                  {errors.shippingLine && <p className="text-red-500 text-[11px] mt-1">{errors.shippingLine}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>MBL Number</label>
+                  <input
+                    className={`${inputClasses} ${errors.mblNumber ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.mblNumber}
+                    onChange={(e) => {
+                      set("mblNumber", e.target.value);
+                      if (errors.mblNumber) setErrors(prev => ({ ...prev, mblNumber: "" }));
+                    }}
+                    placeholder="e.g. MBL-00001"
+                  />
+                  {errors.mblNumber && <p className="text-red-500 text-[11px] mt-1">{errors.mblNumber}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>Booking Number <span className={autoFillBadge}>Auto</span></label>
+                  <input
+                    className={`${inputClasses} ${errors.bookingNumber ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.bookingNumber}
+                    onChange={(e) => {
+                      set("bookingNumber", e.target.value);
+                      if (errors.bookingNumber) setErrors(prev => ({ ...prev, bookingNumber: "" }));
+                    }}
+                  />
+                  {errors.bookingNumber && <p className="text-red-500 text-[11px] mt-1">{errors.bookingNumber}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>Forwarder Reference</label>
+                  <input className={inputClasses} value={form.forwarderReference} onChange={(e) => set("forwarderReference", e.target.value)} />
+                </div>
               </div>
             </div>
 
@@ -187,10 +275,54 @@ export default function MasterBLForm() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h3 className="text-[14px] font-semibold text-slate-800 mb-4">Port Details</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelClasses}>Place of Receipt <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><input className={inputClasses} value={form.placeOfReceipt} onChange={(e) => set("placeOfReceipt", e.target.value)} /></div>
-                <div><label className={labelClasses}>POL <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><input className={inputClasses} value={form.pol} onChange={(e) => set("pol", e.target.value)} /></div>
-                <div><label className={labelClasses}>POD <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><input className={inputClasses} value={form.pod} onChange={(e) => set("pod", e.target.value)} /></div>
-                <div><label className={labelClasses}>Place of Delivery <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><input className={inputClasses} value={form.placeOfDelivery} onChange={(e) => set("placeOfDelivery", e.target.value)} /></div>
+                <div>
+                  <label className={labelClasses}>Place of Receipt <span className={autoFillBadge}>Auto</span></label>
+                  <input
+                    className={`${inputClasses} ${errors.placeOfReceipt ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.placeOfReceipt}
+                    onChange={(e) => {
+                      set("placeOfReceipt", e.target.value);
+                      if (errors.placeOfReceipt) setErrors(prev => ({ ...prev, placeOfReceipt: "" }));
+                    }}
+                  />
+                  {errors.placeOfReceipt && <p className="text-red-500 text-[11px] mt-1">{errors.placeOfReceipt}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>POL <span className={autoFillBadge}>Auto</span></label>
+                  <input
+                    className={`${inputClasses} ${errors.pol ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.pol}
+                    onChange={(e) => {
+                      set("pol", e.target.value);
+                      if (errors.pol) setErrors(prev => ({ ...prev, pol: "" }));
+                    }}
+                  />
+                  {errors.pol && <p className="text-red-500 text-[11px] mt-1">{errors.pol}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>POD <span className={autoFillBadge}>Auto</span></label>
+                  <input
+                    className={`${inputClasses} ${errors.pod ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.pod}
+                    onChange={(e) => {
+                      set("pod", e.target.value);
+                      if (errors.pod) setErrors(prev => ({ ...prev, pod: "" }));
+                    }}
+                  />
+                  {errors.pod && <p className="text-red-500 text-[11px] mt-1">{errors.pod}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>Place of Delivery <span className={autoFillBadge}>Auto</span></label>
+                  <input
+                    className={`${inputClasses} ${errors.placeOfDelivery ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.placeOfDelivery}
+                    onChange={(e) => {
+                      set("placeOfDelivery", e.target.value);
+                      if (errors.placeOfDelivery) setErrors(prev => ({ ...prev, placeOfDelivery: "" }));
+                    }}
+                  />
+                  {errors.placeOfDelivery && <p className="text-red-500 text-[11px] mt-1">{errors.placeOfDelivery}</p>}
+                </div>
               </div>
             </div>
 
@@ -198,8 +330,30 @@ export default function MasterBLForm() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h3 className="text-[14px] font-semibold text-slate-800 mb-4">Vessel</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelClasses}>Vessel <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><input className={inputClasses} value={form.vessel} onChange={(e) => set("vessel", e.target.value)} /></div>
-                <div><label className={labelClasses}>Voyage <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><input className={inputClasses} value={form.voyage} onChange={(e) => set("voyage", e.target.value)} /></div>
+                <div>
+                  <label className={labelClasses}>Vessel <span className={autoFillBadge}>Auto</span></label>
+                  <input
+                    className={`${inputClasses} ${errors.vessel ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.vessel}
+                    onChange={(e) => {
+                      set("vessel", e.target.value);
+                      if (errors.vessel) setErrors(prev => ({ ...prev, vessel: "" }));
+                    }}
+                  />
+                  {errors.vessel && <p className="text-red-500 text-[11px] mt-1">{errors.vessel}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>Voyage <span className={autoFillBadge}>Auto</span></label>
+                  <input
+                    className={`${inputClasses} ${errors.voyage ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.voyage}
+                    onChange={(e) => {
+                      set("voyage", e.target.value);
+                      if (errors.voyage) setErrors(prev => ({ ...prev, voyage: "" }));
+                    }}
+                  />
+                  {errors.voyage && <p className="text-red-500 text-[11px] mt-1">{errors.voyage}</p>}
+                </div>
               </div>
             </div>
 
@@ -207,9 +361,45 @@ export default function MasterBLForm() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h3 className="text-[14px] font-semibold text-slate-800 mb-4">Parties</h3>
               <div className="space-y-4">
-                <div><label className={labelClasses}>Shipper <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><textarea className={`${inputClasses} min-h-[56px] resize-none`} value={form.shipper} onChange={(e) => set("shipper", e.target.value)} rows={2} /></div>
-                <div><label className={labelClasses}>Consignee <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><textarea className={`${inputClasses} min-h-[56px] resize-none`} value={form.consignee} onChange={(e) => set("consignee", e.target.value)} rows={2} /></div>
-                <div><label className={labelClasses}>Notify Party <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><textarea className={`${inputClasses} min-h-[56px] resize-none`} value={form.notifyParty} onChange={(e) => set("notifyParty", e.target.value)} rows={2} /></div>
+                <div>
+                  <label className={labelClasses}>Shipper <span className={autoFillBadge}>Auto</span></label>
+                  <textarea
+                    className={`${inputClasses} min-h-[56px] resize-none ${errors.shipper ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.shipper}
+                    onChange={(e) => {
+                      set("shipper", e.target.value);
+                      if (errors.shipper) setErrors(prev => ({ ...prev, shipper: "" }));
+                    }}
+                    rows={2}
+                  />
+                  {errors.shipper && <p className="text-red-500 text-[11px] mt-1">{errors.shipper}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>Consignee <span className={autoFillBadge}>Auto</span></label>
+                  <textarea
+                    className={`${inputClasses} min-h-[56px] resize-none ${errors.consignee ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.consignee}
+                    onChange={(e) => {
+                      set("consignee", e.target.value);
+                      if (errors.consignee) setErrors(prev => ({ ...prev, consignee: "" }));
+                    }}
+                    rows={2}
+                  />
+                  {errors.consignee && <p className="text-red-500 text-[11px] mt-1">{errors.consignee}</p>}
+                </div>
+                <div>
+                  <label className={labelClasses}>Notify Party <span className={autoFillBadge}>Auto</span></label>
+                  <textarea
+                    className={`${inputClasses} min-h-[56px] resize-none ${errors.notifyParty ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.notifyParty}
+                    onChange={(e) => {
+                      set("notifyParty", e.target.value);
+                      if (errors.notifyParty) setErrors(prev => ({ ...prev, notifyParty: "" }));
+                    }}
+                    rows={2}
+                  />
+                  {errors.notifyParty && <p className="text-red-500 text-[11px] mt-1">{errors.notifyParty}</p>}
+                </div>
               </div>
             </div>
 
@@ -217,9 +407,27 @@ export default function MasterBLForm() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h3 className="text-[14px] font-semibold text-slate-800 mb-4">Cargo Details</h3>
               <div className="space-y-4">
-                <div><label className={labelClasses}>Cargo Description <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><textarea className={`${inputClasses} min-h-[56px] resize-none`} value={form.cargoDescription} onChange={(e) => set("cargoDescription", e.target.value)} rows={2} /></div>
+                <div>
+                  <label className={labelClasses}>Cargo Description <span className={autoFillBadge}>Auto</span></label>
+                  <textarea
+                    className={`${inputClasses} min-h-[56px] resize-none ${errors.cargoDescription ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.cargoDescription}
+                    onChange={(e) => {
+                      set("cargoDescription", e.target.value);
+                      if (errors.cargoDescription) setErrors(prev => ({ ...prev, cargoDescription: "" }));
+                    }}
+                    rows={2}
+                  />
+                  {errors.cargoDescription && <p className="text-red-500 text-[11px] mt-1">{errors.cargoDescription}</p>}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><label className={labelClasses}>Freight Terms <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><select className={inputClasses} value={form.freightTerms} onChange={(e) => set("freightTerms", e.target.value)}><option value="Prepaid">Prepaid</option><option value="Collect">Collect</option></select></div>
+                  <div>
+                    <label className={labelClasses}>Freight Terms <span className={autoFillBadge}>Auto</span></label>
+                    <select className={inputClasses} value={form.freightTerms} onChange={(e) => set("freightTerms", e.target.value)}>
+                      <option value="Prepaid">Prepaid</option>
+                      <option value="Collect">Collect</option>
+                    </select>
+                  </div>
                   <div><label className={labelClasses}>Freight Charges</label><input className={inputClasses} value={form.freightCharges} onChange={(e) => set("freightCharges", e.target.value)} placeholder="e.g. As Arranged" /></div>
                 </div>
                 <div><label className={labelClasses}>Country of Origin</label><input className={inputClasses} value={form.countryOfOrigin} onChange={(e) => set("countryOfOrigin", e.target.value)} placeholder="e.g. Thailand" /></div>
@@ -242,14 +450,26 @@ export default function MasterBLForm() {
               <div className="grid grid-cols-3 gap-4">
                 <div><label className={labelClasses}>Place of Issue</label><input className={inputClasses} value={form.placeOfIssue} onChange={(e) => set("placeOfIssue", e.target.value)} /></div>
                 <div><label className={labelClasses}>Issue Date</label><input type="date" className={inputClasses} value={form.issueDate} onChange={(e) => set("issueDate", e.target.value)} /></div>
-                <div><label className={labelClasses}>On Board Date <span className={autoFillBadge}><Zap className="h-2 w-2" />Auto</span></label><input type="date" className={inputClasses} value={form.onBoardDate} onChange={(e) => set("onBoardDate", e.target.value)} /></div>
+                <div>
+                  <label className={labelClasses}>On Board Date <span className={autoFillBadge}>Auto</span></label>
+                  <input
+                    type="date"
+                    className={`${inputClasses} ${errors.onBoardDate ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.onBoardDate}
+                    onChange={(e) => {
+                      set("onBoardDate", e.target.value);
+                      if (errors.onBoardDate) setErrors(prev => ({ ...prev, onBoardDate: "" }));
+                    }}
+                  />
+                  {errors.onBoardDate && <p className="text-red-500 text-[11px] mt-1">{errors.onBoardDate}</p>}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-4">
-            <PdfUploadSection pdf={pdf} onUpload={handlePdfUpload} onView={() => openPdf(false)} onDownload={() => openPdf(true)} label="Master BL Reference PDF" />
+            <PdfUploadSection pdf={pdf} onUpload={handlePdfUpload} onView={() => openPdf(false)} onDownload={() => openPdf(true)} onDownloadBlob={() => downloadImportPdf(id!, "masterBL")} label="Master BL Reference PDF" />
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
               <h4 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-3">Shipment Info</h4>
               <div className="space-y-2 text-[13px]">

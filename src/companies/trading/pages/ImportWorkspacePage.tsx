@@ -1,17 +1,19 @@
 // src/companies/trading/pages/ImportWorkspacePage.tsx
 
-import { useEffect } from "react";
-import { ArrowLeft, Box } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Box, FileDown, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useImportStore } from "../store/importStore";
 import WorkflowTimeline from "../components/import/WorkflowTimeline";
+import { downloadImportPdf } from "../services/tradingImportService";
 
 export default function ImportWorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getShipment, loadShipments, isLoading } = useImportStore();
   const shipment = getShipment(id!);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (!shipment) void loadShipments();
@@ -31,6 +33,101 @@ export default function ImportWorkspacePage() {
 
   const handleNavigateDoc = (docKey: string) => {
     navigate(`/trading/imports/${id}/${docKey}`);
+  };
+
+  const isPipelineCompleted =
+    !!shipment.draftBL &&
+    !!shipment.houseBL &&
+    !!shipment.masterBL &&
+    !!shipment.clearingInvoice &&
+    !!shipment.paymentReceipt &&
+    !!shipment.detentionInvoice;
+
+  const handleDownloadAll = async () => {
+    if (!shipment) return;
+    setIsDownloading(true);
+
+    const triggerDownload = (blob: Blob, filename: string) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    };
+
+    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    try {
+      // 1. Draft BL
+      if (shipment.draftBL) {
+        let blob: Blob;
+        if (shipment.draftBL.pdf) {
+          blob = await downloadImportPdf(shipment.id, "draftBL");
+        } else {
+          const { generateDraftBLPdf } = await import("../utils/pdfGenerator");
+          blob = generateDraftBLPdf(shipment.draftBL, shipment);
+        }
+        triggerDownload(blob, `Draft_BL_${shipment.referenceNo}.pdf`);
+        await delay(800);
+      }
+
+      // 2. House BL
+      if (shipment.houseBL) {
+        let blob: Blob;
+        if (shipment.houseBL.pdf) {
+          blob = await downloadImportPdf(shipment.id, "houseBL");
+        } else {
+          const { generateHouseBLPdf } = await import("../utils/pdfGenerator");
+          blob = generateHouseBLPdf(shipment.houseBL, shipment);
+        }
+        triggerDownload(blob, `House_BL_${shipment.referenceNo}.pdf`);
+        await delay(800);
+      }
+
+      // 3. Master BL
+      if (shipment.masterBL) {
+        let blob: Blob;
+        if (shipment.masterBL.pdf) {
+          blob = await downloadImportPdf(shipment.id, "masterBL");
+        } else {
+          const { generateMasterBLPdf } = await import("../utils/pdfGenerator");
+          blob = generateMasterBLPdf(shipment.masterBL, shipment);
+        }
+        triggerDownload(blob, `Master_BL_${shipment.referenceNo}.pdf`);
+        await delay(800);
+      }
+
+      // 4. Freight Invoice
+      if (shipment.clearingInvoice) {
+        const { generateInvoicePdf } = await import("../utils/pdfGenerator");
+        const blob = generateInvoicePdf(shipment.clearingInvoice, shipment);
+        triggerDownload(blob, `Freight_Invoice_${shipment.referenceNo}.pdf`);
+        await delay(800);
+      }
+
+      // 5. Payment Receipt
+      if (shipment.paymentReceipt) {
+        const { generateReceiptPdf } = await import("../utils/pdfGenerator");
+        const blob = generateReceiptPdf(shipment.paymentReceipt, shipment);
+        triggerDownload(blob, `Payment_Receipt_${shipment.referenceNo}.pdf`);
+        await delay(800);
+      }
+
+      // 6. Detention Invoice
+      if (shipment.detentionInvoice) {
+        const { generateDetentionPdf } = await import("../utils/pdfGenerator");
+        const blob = generateDetentionPdf(shipment.detentionInvoice, shipment);
+        triggerDownload(blob, `Detention_Invoice_${shipment.referenceNo}.pdf`);
+      }
+    } catch (error) {
+      console.error("Error downloading documents:", error);
+      alert("An error occurred during batch download. Please try downloading files individually.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -55,6 +152,21 @@ export default function ImportWorkspacePage() {
               </div>
             </div>
           </div>
+          {isPipelineCompleted && (
+            <button
+              type="button"
+              disabled={isDownloading}
+              onClick={handleDownloadAll}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(59,130,246,0.3)] transition hover:bg-blue-600 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="h-4 w-4" />
+              )}
+              {isDownloading ? "Downloading Documents..." : "Download All 6 Documents"}
+            </button>
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">

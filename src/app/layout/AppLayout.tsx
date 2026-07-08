@@ -147,12 +147,6 @@ const TRADING_NAV: NavSection[] = [
         moduleSlug: "operations",
       },
       {
-        label: "Import Shipments",
-        to: "/trading/imports",
-        icon: Ship,
-        moduleSlug: "operations",
-      },
-      {
         label: "New Inquiry",
         to: "/trading/inquiry/new",
         icon: ShoppingCart,
@@ -169,6 +163,12 @@ const TRADING_NAV: NavSection[] = [
   {
     title: "Sales",
     items: [
+      {
+        label: "Import Shipments",
+        to: "/trading/imports",
+        icon: Ship,
+        moduleSlug: "sales",
+      },
       {
         label: "Quotation",
         to: "/trading/quotation/new",

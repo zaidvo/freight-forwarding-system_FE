@@ -8,6 +8,7 @@ import { useImportStore, defaultChargeLines, numberToWords } from "../../store/i
 import ChargesTable from "./ChargesTable";
 import DocumentStatusBadge from "./DocumentStatusBadge";
 import type { ImportClearingInvoice, ChargeLine } from "../../types/importTypes";
+import { generateInvoicePdf } from "../../utils/pdfGenerator";
 
 const inputClasses =
   "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-rose-300 focus:ring-2 focus:ring-rose-100";
@@ -63,6 +64,8 @@ export default function ImportClearingInvoiceForm() {
     amountInWords: existing?.amountInWords ?? "",
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     const subtotal = charges.reduce((acc, curr) => acc + (curr.amount || 0), 0);
     setTotals({
@@ -76,6 +79,19 @@ export default function ImportClearingInvoiceForm() {
   const set = (field: string, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }));
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.invoiceNumber.trim()) newErrors.invoiceNumber = "Invoice Number is required";
+    if (!form.invoiceDate.trim()) newErrors.invoiceDate = "Invoice Date is required";
+    if (!form.customer.trim()) newErrors.customer = "Customer is required";
+    if (!form.ntn.trim()) newErrors.ntn = "NTN Number is required";
+    if (!form.clearingAgent.trim()) newErrors.clearingAgent = "Clearing Agent is required";
+    if (form.exchangeRate <= 0) newErrors.exchangeRate = "Exchange Rate must be greater than 0";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
     await saveClearingInvoice(id!, {
       ...form,
@@ -86,12 +102,36 @@ export default function ImportClearingInvoiceForm() {
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      alert("Please fill in all mandatory fields before submitting.");
+      return;
+    }
     await saveClearingInvoice(id!, {
       ...form,
       charges,
       ...totals
     } as Omit<ImportClearingInvoice, "id" | "shipmentId" | "status" | "audit">);
     navigate(`/trading/imports/${id}`);
+  };
+
+  const handleGeneratePdf = () => {
+    if (!shipment) return;
+    const currentInvoiceData: ImportClearingInvoice = {
+      id: existing?.id ?? "temp",
+      shipmentId: id!,
+      status: existing?.status ?? "draft",
+      audit: existing?.audit ?? { createdBy: "User", createdDate: "" },
+      ...form,
+      charges,
+      ...totals,
+    };
+    const blob = generateInvoicePdf(currentInvoiceData, shipment);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Freight_Invoice_${form.invoiceNumber || shipment.referenceNo}.pdf`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   };
 
   if (!shipment) {
@@ -133,15 +173,14 @@ export default function ImportClearingInvoiceForm() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {existing && (
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50"
-              >
-                <FileDown className="h-4 w-4" />
-                Generate PDF
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleGeneratePdf}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50"
+            >
+              <FileDown className="h-4 w-4" />
+              Generate PDF
+            </button>
             <button
               type="button"
               onClick={handleSave}
@@ -182,53 +221,77 @@ export default function ImportClearingInvoiceForm() {
                 <div>
                   <label className={labelClasses}>Invoice Number</label>
                   <input
-                    className={inputClasses}
+                    className={`${inputClasses} ${errors.invoiceNumber ? "border-red-500 focus:ring-red-100" : ""}`}
                     value={form.invoiceNumber}
-                    onChange={(e) => set("invoiceNumber", e.target.value)}
+                    onChange={(e) => {
+                      set("invoiceNumber", e.target.value);
+                      if (errors.invoiceNumber) setErrors(prev => ({ ...prev, invoiceNumber: "" }));
+                    }}
                     placeholder="e.g. INV-001"
                   />
+                  {errors.invoiceNumber && <p className="text-red-500 text-[11px] mt-1">{errors.invoiceNumber}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Invoice Date</label>
                   <input
                     type="date"
-                    className={inputClasses}
+                    className={`${inputClasses} ${errors.invoiceDate ? "border-red-500 focus:ring-red-100" : ""}`}
                     value={form.invoiceDate}
-                    onChange={(e) => set("invoiceDate", e.target.value)}
+                    onChange={(e) => {
+                      set("invoiceDate", e.target.value);
+                      if (errors.invoiceDate) setErrors(prev => ({ ...prev, invoiceDate: "" }));
+                    }}
                   />
+                  {errors.invoiceDate && <p className="text-red-500 text-[11px] mt-1">{errors.invoiceDate}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Customer</label>
                   <input
-                    className={inputClasses}
+                    className={`${inputClasses} ${errors.customer ? "border-red-500 focus:ring-red-100" : ""}`}
                     value={form.customer}
-                    onChange={(e) => set("customer", e.target.value)}
+                    onChange={(e) => {
+                      set("customer", e.target.value);
+                      if (errors.customer) setErrors(prev => ({ ...prev, customer: "" }));
+                    }}
                   />
+                  {errors.customer && <p className="text-red-500 text-[11px] mt-1">{errors.customer}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>NTN Number</label>
                   <input
-                    className={inputClasses}
+                    className={`${inputClasses} ${errors.ntn ? "border-red-500 focus:ring-red-100" : ""}`}
                     value={form.ntn}
-                    onChange={(e) => set("ntn", e.target.value)}
+                    onChange={(e) => {
+                      set("ntn", e.target.value);
+                      if (errors.ntn) setErrors(prev => ({ ...prev, ntn: "" }));
+                    }}
                   />
+                  {errors.ntn && <p className="text-red-500 text-[11px] mt-1">{errors.ntn}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Clearing Agent</label>
                   <input
-                    className={inputClasses}
+                    className={`${inputClasses} ${errors.clearingAgent ? "border-red-500 focus:ring-red-100" : ""}`}
                     value={form.clearingAgent}
-                    onChange={(e) => set("clearingAgent", e.target.value)}
+                    onChange={(e) => {
+                      set("clearingAgent", e.target.value);
+                      if (errors.clearingAgent) setErrors(prev => ({ ...prev, clearingAgent: "" }));
+                    }}
                   />
+                  {errors.clearingAgent && <p className="text-red-500 text-[11px] mt-1">{errors.clearingAgent}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Exchange Rate</label>
                   <input
                     type="number"
-                    className={inputClasses}
+                    className={`${inputClasses} ${errors.exchangeRate ? "border-red-500 focus:ring-red-100" : ""}`}
                     value={form.exchangeRate || ""}
-                    onChange={(e) => set("exchangeRate", parseFloat(e.target.value) || 1)}
+                    onChange={(e) => {
+                      set("exchangeRate", parseFloat(e.target.value) || 0);
+                      if (errors.exchangeRate) setErrors(prev => ({ ...prev, exchangeRate: "" }));
+                    }}
                   />
+                  {errors.exchangeRate && <p className="text-red-500 text-[11px] mt-1">{errors.exchangeRate}</p>}
                 </div>
               </div>
             </div>

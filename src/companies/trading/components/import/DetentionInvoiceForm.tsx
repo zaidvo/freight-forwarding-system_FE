@@ -16,7 +16,6 @@ export default function DetentionInvoiceForm() {
   const { getShipment, loadShipments, saveDetentionInvoice, isLoading } = useImportStore();
   const shipment = getShipment(id!);
   const existing = shipment?.detentionInvoice;
-  const sourceDoc = shipment?.masterBL ?? shipment?.houseBL;
 
   const [form, setForm] = useState({
     invoiceNo: existing?.invoiceNo ?? "",
@@ -28,6 +27,8 @@ export default function DetentionInvoiceForm() {
     currency: existing?.currency ?? "PKR",
     manualFields: existing?.manualFields ?? {},
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!shipment) void loadShipments();
@@ -60,7 +61,24 @@ export default function DetentionInvoiceForm() {
   const detentionAmount = chargeableDays * form.perDayAmount;
   const refundAmount = form.securityDeposit - detentionAmount;
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.invoiceNo.trim()) newErrors.invoiceNo = "Invoice Number is required";
+    if (!form.currency.trim()) newErrors.currency = "Currency is required";
+    if (!form.detentionStart.trim()) newErrors.detentionStart = "Detention Start Date is required";
+    if (!form.detentionEnd.trim()) newErrors.detentionEnd = "Detention End Date is required";
+    if (form.perDayAmount <= 0) newErrors.perDayAmount = "Per Day Amount must be greater than 0";
+    if (form.securityDeposit <= 0) newErrors.securityDeposit = "Security Deposit must be greater than 0";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
+    if (!validateForm()) {
+      alert("Please fill in all mandatory fields before saving detention invoice.");
+      return;
+    }
     await saveDetentionInvoice(
       id!,
       form as Omit<DetentionInvoice, "id" | "shipmentId" | "status" | "audit" | "chargeableDays" | "detentionAmount" | "refundAmount" | "renderData">,
@@ -119,19 +137,53 @@ export default function DetentionInvoiceForm() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelClasses}>Invoice No</label>
-                  <input className={inputClasses} value={form.invoiceNo} onChange={(event) => set("invoiceNo", event.target.value)} />
+                  <input
+                    className={`${inputClasses} ${errors.invoiceNo ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.invoiceNo}
+                    onChange={(event) => {
+                      set("invoiceNo", event.target.value);
+                      if (errors.invoiceNo) setErrors(prev => ({ ...prev, invoiceNo: "" }));
+                    }}
+                  />
+                  {errors.invoiceNo && <p className="text-red-500 text-[11px] mt-1">{errors.invoiceNo}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Currency</label>
-                  <input className={inputClasses} value={form.currency} onChange={(event) => set("currency", event.target.value)} />
+                  <input
+                    className={`${inputClasses} ${errors.currency ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.currency}
+                    onChange={(event) => {
+                      set("currency", event.target.value);
+                      if (errors.currency) setErrors(prev => ({ ...prev, currency: "" }));
+                    }}
+                  />
+                  {errors.currency && <p className="text-red-500 text-[11px] mt-1">{errors.currency}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Detention Start</label>
-                  <input type="date" className={inputClasses} value={form.detentionStart} onChange={(event) => set("detentionStart", event.target.value)} />
+                  <input
+                    type="date"
+                    className={`${inputClasses} ${errors.detentionStart ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.detentionStart}
+                    onChange={(event) => {
+                      set("detentionStart", event.target.value);
+                      if (errors.detentionStart) setErrors(prev => ({ ...prev, detentionStart: "" }));
+                    }}
+                  />
+                  {errors.detentionStart && <p className="text-red-500 text-[11px] mt-1">{errors.detentionStart}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Detention End</label>
-                  <input type="date" className={inputClasses} value={form.detentionEnd} onChange={(event) => set("detentionEnd", event.target.value)} />
+                  <input
+                    type="date"
+                    className={`${inputClasses} ${errors.detentionEnd ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.detentionEnd}
+                    onChange={(event) => {
+                      set("detentionEnd", event.target.value);
+                      if (errors.detentionEnd) setErrors(prev => ({ ...prev, detentionEnd: "" }));
+                    }}
+                  />
+                  {errors.detentionEnd && <p className="text-red-500 text-[11px] mt-1">{errors.detentionEnd}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Free Days</label>
@@ -139,33 +191,73 @@ export default function DetentionInvoiceForm() {
                 </div>
                 <div>
                   <label className={labelClasses}>Per Day Amount</label>
-                  <input type="number" className={inputClasses} value={form.perDayAmount || ""} onChange={(event) => set("perDayAmount", Number(event.target.value) || 0)} />
+                  <input
+                    type="number"
+                    className={`${inputClasses} ${errors.perDayAmount ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.perDayAmount || ""}
+                    onChange={(event) => {
+                      set("perDayAmount", Number(event.target.value) || 0);
+                      if (errors.perDayAmount) setErrors(prev => ({ ...prev, perDayAmount: "" }));
+                    }}
+                  />
+                  {errors.perDayAmount && <p className="text-red-500 text-[11px] mt-1">{errors.perDayAmount}</p>}
                 </div>
                 <div>
                   <label className={labelClasses}>Security Deposit</label>
-                  <input type="number" className={inputClasses} value={form.securityDeposit || ""} onChange={(event) => set("securityDeposit", Number(event.target.value) || 0)} />
+                  <input
+                    type="number"
+                    className={`${inputClasses} ${errors.securityDeposit ? "border-red-500 focus:ring-red-100" : ""}`}
+                    value={form.securityDeposit || ""}
+                    onChange={(event) => {
+                      set("securityDeposit", Number(event.target.value) || 0);
+                      if (errors.securityDeposit) setErrors(prev => ({ ...prev, securityDeposit: "" }));
+                    }}
+                  />
+                  {errors.securityDeposit && <p className="text-red-500 text-[11px] mt-1">{errors.securityDeposit}</p>}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)] opacity-80">
-              <h3 className="mb-4 text-[14px] font-semibold text-slate-800">Shipment Reference Data</h3>
-              <div className="grid grid-cols-2 gap-4 text-[13px]">
-                <div><span className="text-slate-500">HBL:</span> {shipment.houseBL?.hblNumber || "—"}</div>
-                <div><span className="text-slate-500">MBL:</span> {shipment.masterBL?.mblNumber || "—"}</div>
-                <div><span className="text-slate-500">Container:</span> {sourceDoc?.containers?.[0]?.containerNo || "—"}</div>
-                <div><span className="text-slate-500">Consignee:</span> {sourceDoc?.consignee || "—"}</div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
+              <h3 className="mb-4 text-[14px] font-semibold text-slate-800">Summary Overview (Read-Only)</h3>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total Days</p>
+                  <p className="text-[18px] font-bold text-slate-700 mt-1">{totalDays} Days</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Chargeable Days</p>
+                  <p className="text-[18px] font-bold text-slate-700 mt-1">{chargeableDays} Days</p>
+                </div>
+                <div className="rounded-xl bg-amber-50 p-3 border border-amber-100">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600">Detention Amt</p>
+                  <p className="text-[18px] font-bold text-amber-700 mt-1">{detentionAmount.toLocaleString()} {form.currency}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 px-2">
+                <span className="text-[13px] font-medium text-slate-500">Net Refund / Balance:</span>
+                <span className={`text-[16px] font-bold ${refundAmount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  {refundAmount >= 0 ? "Refund: " : "Payable: "} {Math.abs(refundAmount).toLocaleString()} {form.currency}
+                </span>
               </div>
             </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
-            <h4 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500">Calculated Preview</h4>
-            <div className="space-y-3 text-[13px]">
-              <div className="flex justify-between"><span className="text-slate-500">Total Days</span><span className="font-medium">{totalDays}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500">Chargeable Days</span><span className="font-medium">{chargeableDays}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500">Detention Amount</span><span className="font-medium">{detentionAmount.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500">Refund</span><span className="font-bold text-slate-900">{refundAmount.toLocaleString()}</span></div>
+            <h4 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500">Shipment Info</h4>
+            <div className="space-y-2 text-[13px]">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Reference</span>
+                <span className="font-medium text-slate-800">{shipment.referenceNo}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Customer</span>
+                <span className="font-medium text-slate-800">{shipment.customer}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Clearing Invoice</span>
+                <span className="font-medium text-slate-800">{shipment.clearingInvoice?.invoiceNumber || "—"}</span>
+              </div>
             </div>
           </div>
         </div>
