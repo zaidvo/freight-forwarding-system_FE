@@ -1,15 +1,12 @@
-// src/companies/trading/components/import/WorkflowTimeline.tsx
-
 import {
-  FileText,
+  Check,
+  CreditCard,
   FileCheck,
   FilePlus,
-  Receipt,
-  CreditCard,
-  Clock,
-  Check,
-  Circle,
+  FileText,
   Lock,
+  Receipt,
+  Timer,
 } from "lucide-react";
 import type { ImportShipment } from "../../types/importTypes";
 import DocumentStatusBadge from "./DocumentStatusBadge";
@@ -22,9 +19,8 @@ type Props = {
 type StepConfig = {
   key: string;
   label: string;
+  helper: string;
   icon: React.ElementType;
-  color: string;
-  bgColor: string;
   docKey: "draftBL" | "houseBL" | "masterBL" | "clearingInvoice" | "paymentReceipt" | "detentionInvoice";
 };
 
@@ -32,155 +28,116 @@ const STEPS: StepConfig[] = [
   {
     key: "draft-bl",
     label: "Draft BL",
+    helper: "Received BL details and reference PDF",
     icon: FileText,
-    color: "text-blue-500",
-    bgColor: "bg-blue-50",
     docKey: "draftBL",
   },
   {
     key: "hbl",
     label: "House BL",
+    helper: "House bill details linked to this import",
     icon: FileCheck,
-    color: "text-violet-500",
-    bgColor: "bg-violet-50",
     docKey: "houseBL",
   },
   {
     key: "mbl",
     label: "Master BL",
+    helper: "Master carrier bill details",
     icon: FilePlus,
-    color: "text-indigo-500",
-    bgColor: "bg-indigo-50",
     docKey: "masterBL",
   },
   {
     key: "invoice",
     label: "Freight Invoice",
+    helper: "Generated from BL data plus manual charges",
     icon: Receipt,
-    color: "text-rose-500",
-    bgColor: "bg-rose-50",
     docKey: "clearingInvoice",
   },
   {
     key: "payment-receipt",
-    label: "Import Payment Receipt",
+    label: "Payment Receipt",
+    helper: "Generated after payment is recorded",
     icon: CreditCard,
-    color: "text-emerald-500",
-    bgColor: "bg-emerald-50",
     docKey: "paymentReceipt",
   },
   {
     key: "detention-invoice",
     label: "Detention Invoice",
-    icon: Clock,
-    color: "text-amber-500",
-    bgColor: "bg-amber-50",
+    helper: "Optional detention and refund calculation",
+    icon: Timer,
     docKey: "detentionInvoice",
   },
 ];
 
 export default function WorkflowTimeline({ shipment, onNavigate }: Props) {
   return (
-    <div className="space-y-1">
-      <h3 className="text-[13px] font-semibold text-slate-700 mb-3">
-        Document Workflow
-      </h3>
-      <div className="relative">
-        {STEPS.map((step, idx) => {
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-[15px] font-bold text-slate-900">Document Flow</h3>
+          <p className="mt-1 text-[12px] text-slate-500">
+            Complete each document to unlock the next step.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {STEPS.map((step, index) => {
           const doc = shipment[step.docKey];
-          const isCreated = !!doc;
+          const isCreated = Boolean(doc);
           const isApproved = doc?.status === "approved";
+          const previousDoc = index > 0 ? shipment[STEPS[index - 1].docKey] : true;
+          const isLocked = !previousDoc;
           const Icon = step.icon;
 
-          // Determine if this step is the "next" one to complete
-          const prevDoc =
-            idx > 0 ? shipment[STEPS[idx - 1].docKey] : { status: "approved" };
-          const isUnlocked = idx === 0 || !!prevDoc;
-          const isLocked = !isUnlocked;
-
           return (
-            <div key={step.key} className="relative flex gap-4">
-              {/* Vertical connector line */}
-              {idx < STEPS.length - 1 && (
-                <div
-                  className={`absolute left-[19px] top-[40px] w-0.5 ${
-                    isCreated ? "bg-blue-200" : "bg-slate-200"
-                  }`}
-                  style={{ height: "calc(100% - 16px)" }}
-                />
-              )}
-
-              {/* Step circle */}
-              <div className="relative z-10 shrink-0">
+            <button
+              key={step.key}
+              type="button"
+              onClick={() => onNavigate(step.key)}
+              disabled={isLocked}
+              className={`flex w-full items-center gap-4 rounded-[14px] border px-4 py-3 text-left transition ${
+                isLocked
+                  ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400"
+                  : "border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50/40"
+              }`}
+            >
+              <div
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                  isApproved
+                    ? "bg-emerald-50 text-emerald-600"
+                    : isCreated
+                      ? "bg-blue-50 text-blue-600"
+                      : isLocked
+                        ? "bg-slate-100 text-slate-300"
+                        : "bg-slate-50 text-slate-500"
+                }`}
+              >
                 {isApproved ? (
-                  <div className="grid h-[38px] w-[38px] place-items-center rounded-full bg-emerald-100 ring-4 ring-emerald-50">
-                    <Check className="h-4 w-4 text-emerald-600" />
-                  </div>
-                ) : isCreated ? (
-                  <div
-                    className={`grid h-[38px] w-[38px] place-items-center rounded-full ${step.bgColor} ring-4 ring-white`}
-                  >
-                    <Icon className={`h-4 w-4 ${step.color}`} />
-                  </div>
+                  <Check className="h-4 w-4" />
                 ) : isLocked ? (
-                  <div className="grid h-[38px] w-[38px] place-items-center rounded-full bg-slate-100 ring-4 ring-white">
-                    <Lock className="h-3.5 w-3.5 text-slate-300" />
-                  </div>
+                  <Lock className="h-4 w-4" />
                 ) : (
-                  <div className="grid h-[38px] w-[38px] place-items-center rounded-full border-2 border-dashed border-slate-300 bg-white ring-4 ring-white">
-                    <Circle className="h-3 w-3 text-slate-300" />
-                  </div>
+                  <Icon className="h-4 w-4" />
                 )}
               </div>
 
-              {/* Step card */}
-              <button
-                type="button"
-                onClick={() => onNavigate(step.key)}
-                disabled={isLocked}
-                className={`mb-3 flex-1 rounded-xl border p-4 text-left transition-all ${
-                  isLocked
-                    ? "cursor-not-allowed border-slate-100 bg-slate-50/50 opacity-60"
-                    : isCreated
-                    ? "cursor-pointer border-slate-200 bg-white shadow-[0_2px_8px_rgba(22,31,54,0.04)] hover:shadow-[0_4px_16px_rgba(22,31,54,0.08)] hover:border-blue-200"
-                    : "cursor-pointer border-dashed border-slate-200 bg-white/60 hover:border-blue-300 hover:bg-blue-50/20"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={`text-[14px] font-semibold ${
-                      isLocked ? "text-slate-400" : "text-slate-800"
-                    }`}
-                  >
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`text-[14px] font-semibold ${isLocked ? "text-slate-400" : "text-slate-900"}`}>
                     {step.label}
                   </span>
                   {isCreated && <DocumentStatusBadge status={doc.status} />}
                 </div>
-                {isCreated ? (
-                  <div className="flex items-center gap-4 text-[12px] text-slate-500">
-                    <span>
-                      Created:{" "}
-                      {new Date(doc.audit.createdDate).toLocaleDateString()}
-                    </span>
-                    <span>By: {doc.audit.createdBy}</span>
-                    {(doc as any).pdf && (
-                      <span className="inline-flex items-center gap-1 text-rose-500">
-                        <FileText className="h-3 w-3" />
-                        PDF
-                      </span>
-                    )}
-                  </div>
-                ) : !isLocked ? (
-                  <p className="text-[12px] text-slate-400">
-                    Click to create this document
-                  </p>
-                ) : (
-                  <p className="text-[12px] text-slate-300">
-                    Complete previous step first
-                  </p>
-                )}
-              </button>
-            </div>
+                <p className="mt-0.5 text-[12px] text-slate-500">
+                  {isCreated
+                    ? `Created ${new Date(doc.audit.createdDate).toLocaleDateString()} by ${doc.audit.createdBy}`
+                    : isLocked
+                      ? "Complete the previous document first"
+                      : step.helper}
+                </p>
+              </div>
+            </button>
           );
         })}
       </div>

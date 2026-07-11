@@ -46,6 +46,32 @@ export type BackendGroup = {
   updated_at: string;
 };
 
+
+export type BackendActivityAction =
+  | "login"
+  | "logout"
+  | "failed_login"
+  | "create_user"
+  | "update_user"
+  | "deactivate_user"
+  | "change_password"
+  | "forgot_password"
+  | "reset_password";
+
+export type BackendActivityLog = {
+  id: number;
+  actor_user_id: number | null;
+  actor_name: string | null;
+  actor_email: string | null;
+  action: BackendActivityAction;
+  target_user_id: number | null;
+  target_name: string | null;
+  target_email: string | null;
+  success: boolean;
+  description: string | null;
+  ip_address: string | null;
+  created_at: string;
+};
 export type LoginResponse = {
   access_token: string;
   token_type: "bearer";
@@ -171,3 +197,4 @@ export async function apiBlobRequest(path: string, options: RequestInit = {}): P
 
   return response.blob();
 }
+

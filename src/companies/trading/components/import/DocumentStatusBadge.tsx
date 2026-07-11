@@ -13,10 +13,10 @@ const STATUS_CONFIG: Record<
     dot: "bg-slate-400",
   },
   pending_approval: {
-    label: "Pending Approval",
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    dot: "bg-amber-400",
+    label: "Completed",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    dot: "bg-emerald-500",
   },
   approved: {
     label: "Approved",
@@ -53,3 +53,4 @@ export default function DocumentStatusBadge({ status, size = "sm" }: Props) {
     </span>
   );
 }
+

@@ -3,7 +3,7 @@
 // Master BL form. Auto-fills matching fields from House BL.
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Save, Send, FilePlus, Zap } from "lucide-react";
+import { ArrowLeft, Save, Send, FilePlus, Zap, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useImportStore, emptyContainer } from "../../store/importStore";
@@ -23,6 +23,7 @@ export default function MasterBLForm() {
   const { getShipment, saveMasterBL, uploadPdf, loadShipments, isLoading } = useImportStore();
   const shipment = getShipment(id!);
   const existing = shipment?.masterBL;
+  const isComplete = existing?.status === "pending_approval" || existing?.status === "approved";
   const hbl = shipment?.houseBL;
 
   const [form, setForm] = useState({
@@ -56,6 +57,7 @@ export default function MasterBLForm() {
   );
   const [pdf, setPdf] = useState<PdfAttachment | undefined>(existing?.pdf);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [savingMode, setSavingMode] = useState<"draft" | "complete" | null>(null);
 
   const set = (field: string, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -125,17 +127,29 @@ export default function MasterBLForm() {
   };
 
   const handleSave = async () => {
-    await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, false);
-    navigate(`/trading/imports/${id}`);
+    if (savingMode) return;
+    setSavingMode("draft");
+    try {
+      await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, isComplete);
+      navigate(`/trading/imports/${id}`);
+    } finally {
+      setSavingMode(null);
+    }
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      alert("Please fill in all mandatory fields before submitting.");
+      alert("Please fill in all mandatory fields before marking complete.");
       return;
     }
-    await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, true);
-    navigate(`/trading/imports/${id}`);
+    if (savingMode) return;
+    setSavingMode("complete");
+    try {
+      await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, true);
+      navigate(`/trading/imports/${id}`);
+    } finally {
+      setSavingMode(null);
+    }
   };
 
   const handlePdfUpload = async (file: File) => {
@@ -194,18 +208,20 @@ export default function MasterBLForm() {
             <button
               type="button"
               onClick={handleSave}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50"
+              disabled={savingMode !== null}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Save className="h-4 w-4" />
-              Save Draft
+              {savingMode === "draft" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {savingMode === "draft" ? "Saving..." : isComplete ? "Save Changes" : "Save Draft"}
             </button>
             <button
               type="button"
               onClick={handleSubmit}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(99,102,241,0.3)] transition hover:bg-indigo-600"
+              disabled={savingMode !== null}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(59,130,246,0.3)] transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Send className="h-4 w-4" />
-              Submit
+              {savingMode === "complete" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {savingMode === "complete" ? "Marking Complete..." : "Mark Complete"}
             </button>
           </div>
         </div>
@@ -484,3 +500,6 @@ export default function MasterBLForm() {
     </AppLayout>
   );
 }
+
+
+

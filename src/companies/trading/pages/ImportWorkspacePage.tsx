@@ -1,11 +1,10 @@
-// src/companies/trading/pages/ImportWorkspacePage.tsx
-
 import { useEffect, useState } from "react";
-import { ArrowLeft, Box, FileDown, Loader2 } from "lucide-react";
+import { ArrowLeft, Box, CalendarDays, FileDown, Loader2, Package, User } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useImportStore } from "../store/importStore";
 import WorkflowTimeline from "../components/import/WorkflowTimeline";
+import type { ImportShipment } from "../types/importTypes";
 
 export default function ImportWorkspacePage() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +20,7 @@ export default function ImportWorkspacePage() {
   if (!shipment) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-64 text-slate-500">
+        <div className="flex h-64 items-center justify-center text-slate-500">
           {isLoading ? "Loading shipment..." : "Shipment not found"}
         </div>
       </AppLayout>
@@ -60,51 +59,39 @@ export default function ImportWorkspacePage() {
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     try {
-      // 1. Draft BL
       if (shipment.draftBL) {
         const { generateDraftBLPdf } = await import("../utils/pdfGenerator");
-        const blob = generateDraftBLPdf(shipment.draftBL, shipment);
-        triggerDownload(blob, `Draft_BL_${shipment.referenceNo}.pdf`);
+        triggerDownload(generateDraftBLPdf(shipment.draftBL, shipment), `Draft_BL_${shipment.referenceNo}.pdf`);
         await delay(800);
       }
 
-      // 2. House BL
       if (shipment.houseBL) {
         const { generateHouseBLPdf } = await import("../utils/pdfGenerator");
-        const blob = generateHouseBLPdf(shipment.houseBL, shipment);
-        triggerDownload(blob, `House_BL_${shipment.referenceNo}.pdf`);
+        triggerDownload(generateHouseBLPdf(shipment.houseBL, shipment), `House_BL_${shipment.referenceNo}.pdf`);
         await delay(800);
       }
 
-      // 3. Master BL
       if (shipment.masterBL) {
         const { generateMasterBLPdf } = await import("../utils/pdfGenerator");
-        const blob = generateMasterBLPdf(shipment.masterBL, shipment);
-        triggerDownload(blob, `Master_BL_${shipment.referenceNo}.pdf`);
+        triggerDownload(generateMasterBLPdf(shipment.masterBL, shipment), `Master_BL_${shipment.referenceNo}.pdf`);
         await delay(800);
       }
 
-      // 4. Freight Invoice
       if (shipment.clearingInvoice) {
         const { generateInvoicePdf } = await import("../utils/pdfGenerator");
-        const blob = generateInvoicePdf(shipment.clearingInvoice, shipment);
-        triggerDownload(blob, `Freight_Invoice_${shipment.referenceNo}.pdf`);
+        triggerDownload(generateInvoicePdf(shipment.clearingInvoice, shipment), `Freight_Invoice_${shipment.referenceNo}.pdf`);
         await delay(800);
       }
 
-      // 5. Payment Receipt
       if (shipment.paymentReceipt) {
         const { generateReceiptPdf } = await import("../utils/pdfGenerator");
-        const blob = generateReceiptPdf(shipment.paymentReceipt, shipment);
-        triggerDownload(blob, `Payment_Receipt_${shipment.referenceNo}.pdf`);
+        triggerDownload(generateReceiptPdf(shipment.paymentReceipt, shipment), `Payment_Receipt_${shipment.referenceNo}.pdf`);
         await delay(800);
       }
 
-      // 6. Detention Invoice
       if (shipment.detentionInvoice) {
         const { generateDetentionPdf } = await import("../utils/pdfGenerator");
-        const blob = generateDetentionPdf(shipment.detentionInvoice, shipment);
-        triggerDownload(blob, `Detention_Invoice_${shipment.referenceNo}.pdf`);
+        triggerDownload(generateDetentionPdf(shipment.detentionInvoice, shipment), `Detention_Invoice_${shipment.referenceNo}.pdf`);
       }
     } catch (error) {
       console.error("Error downloading documents:", error);
@@ -116,134 +103,124 @@ export default function ImportWorkspacePage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-5xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate("/trading/imports")}
-              className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <Box className="h-5 w-5 text-blue-500" />
-                <h1 className="text-[20px] font-bold tracking-tight text-slate-900">
-                  Shipment Workspace
+      <div className="mx-auto max-w-6xl space-y-5">
+        <section className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => navigate("/trading/imports")}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+                aria-label="Back to import shipments"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <Box className="h-5 w-5 text-blue-500" />
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-500">
+                    Import Shipment
+                  </p>
+                </div>
+                <h1 className="mt-1 text-[24px] font-bold tracking-[-0.04em] text-slate-950">
+                  {shipment.referenceNo}
                 </h1>
-              </div>
-            </div>
-          </div>
-          {isPipelineCompleted && (
-            <button
-              type="button"
-              disabled={isDownloading}
-              onClick={handleDownloadAll}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(59,130,246,0.3)] transition hover:bg-blue-600 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isDownloading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown className="h-4 w-4" />
-              )}
-              {isDownloading ? "Downloading Documents..." : "Download All 6 Documents"}
-            </button>
-          )}
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Shipment Summary */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_4px_20px_rgba(22,31,54,0.04)]">
-              <h3 className="text-[15px] font-bold text-slate-800 mb-5 pb-4 border-b border-slate-100">
-                Shipment Summary
-              </h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Customer
-                  </p>
-                  <p className="text-[14px] font-medium text-slate-900">
-                    {shipment.customer}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Reference Number
-                  </p>
-                  <p className="text-[14px] font-medium text-slate-900">
-                    {shipment.referenceNo}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Containers
-                  </p>
-                  <p className="text-[14px] font-medium text-slate-900">
-                    {containerCount} Units
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Current Stage
-                  </p>
-                  <p className="text-[14px] font-medium text-blue-600">
-                    {shipment.currentStage}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Status
-                  </p>
-                  <p className="text-[14px] font-medium capitalize text-slate-900">
-                    {shipment.status.replace("_", " ")}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-                    Expected Arrival
-                  </p>
-                  <p className="text-[14px] font-medium text-slate-900">
-                    {shipment.expectedArrivalDate
-                      ? new Date(shipment.expectedArrivalDate).toLocaleDateString()
-                      : "—"}
-                  </p>
-                </div>
+                <p className="mt-1 text-[14px] text-slate-500">
+                  {shipment.customer || "No customer selected"}
+                </p>
               </div>
             </div>
 
-            {/* Workflow Timeline */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_4px_20px_rgba(22,31,54,0.04)]">
-              <WorkflowTimeline shipment={shipment} onNavigate={handleNavigateDoc} />
-            </div>
+            {isPipelineCompleted && (
+              <button
+                type="button"
+                disabled={isDownloading}
+                onClick={handleDownloadAll}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(37,99,235,0.24)] transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDownloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
+                {isDownloading ? "Downloading..." : "Download All Documents"}
+              </button>
+            )}
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_rgba(22,31,54,0.04)]">
-              <h4 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <SummaryItem icon={User} label="Salesperson" value={shipment.salesperson || "-"} />
+            <SummaryItem icon={Package} label="Containers" value={`${containerCount} unit${containerCount === 1 ? "" : "s"}`} />
+            <SummaryItem icon={CalendarDays} label="Expected Arrival" value={shipment.expectedArrivalDate ? formatDate(shipment.expectedArrivalDate) : "-"} />
+            <SummaryItem icon={Box} label="Status" value={formatStage(shipment.status)} accent />
+          </div>
+        </section>
+
+        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+          <section className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+            <WorkflowTimeline shipment={shipment} onNavigate={handleNavigateDoc} />
+          </section>
+
+          <aside className="space-y-4">
+            <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+              <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Current Stage
+              </h2>
+              <p className="mt-2 text-[18px] font-bold text-blue-600">
+                {formatStage(shipment.currentStage)}
+              </p>
+              <p className="mt-3 text-[13px] leading-6 text-slate-500">
+                Open the next available document from the flow and complete the required fields.
+              </p>
+            </div>
+
+            <div className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
+              <h2 className="text-[13px] font-bold uppercase tracking-[0.12em] text-slate-400">
                 Remarks
-              </h4>
-              <p className="text-[13px] text-slate-600 leading-relaxed">
+              </h2>
+              <p className="mt-2 text-[13px] leading-6 text-slate-600">
                 {shipment.remarks || "No remarks provided for this shipment."}
               </p>
             </div>
-            
-            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-              <h4 className="text-[13px] font-semibold text-blue-900 mb-2">
-                Workflow Guidance
-              </h4>
-              <ul className="space-y-2 text-[12px] text-blue-800 list-disc pl-4">
-                <li>Start by completing the Draft BL. This data will automatically flow into subsequent documents.</li>
-                <li>Upload reference PDFs for the first three documents when available.</li>
-                <li>Each document must be completed sequentially to unlock the next stage.</li>
-              </ul>
-            </div>
-          </div>
+          </aside>
         </div>
       </div>
     </AppLayout>
   );
+}
+
+type SummaryItemProps = {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  accent?: boolean;
+};
+
+function SummaryItem({ icon: Icon, label, value, accent = false }: SummaryItemProps) {
+  return (
+    <div className="rounded-[14px] border border-slate-100 bg-slate-50 px-4 py-3">
+      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <p className={`mt-2 text-[14px] font-semibold ${accent ? "text-blue-600" : "text-slate-900"}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatStage(value: ImportShipment["currentStage"] | ImportShipment["status"]) {
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }

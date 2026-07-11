@@ -1,7 +1,7 @@
 // src/companies/trading/components/import/PaymentReceiptForm.tsx
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, CreditCard, Save } from "lucide-react";
+import { ArrowLeft, CreditCard, Save, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useImportStore } from "../../store/importStore";
@@ -29,6 +29,7 @@ export default function PaymentReceiptForm() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!shipment) void loadShipments();
@@ -64,8 +65,13 @@ export default function PaymentReceiptForm() {
       alert("Please fill in all mandatory fields before saving receipt.");
       return;
     }
-    await savePaymentReceipt(id!, form as Omit<ImportPaymentReceipt, "id" | "shipmentId" | "status" | "audit">);
-    navigate(`/trading/imports/${id}`);
+    setIsSaving(true);
+    try {
+      await savePaymentReceipt(id!, form as Omit<ImportPaymentReceipt, "id" | "shipmentId" | "status" | "audit">);
+      navigate(`/trading/imports/${id}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!shipment) {
@@ -105,11 +111,11 @@ export default function PaymentReceiptForm() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!invoice}
+            disabled={!invoice || isSaving}
             className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(16,185,129,0.3)] transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            <Save className="h-4 w-4" />
-            Save Receipt
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {isSaving ? "Saving Receipt..." : "Save Receipt"}
           </button>
         </div>
 
@@ -208,3 +214,5 @@ export default function PaymentReceiptForm() {
     </AppLayout>
   );
 }
+
+

@@ -83,6 +83,8 @@ export default function AppRoutes() {
                   element={<BillOfLadingPage />}
                 />
 
+                <Route path="/freight" element={<FreightPage />} />
+
                 <Route path="/trading" element={<TradingPage />} />
                 <Route
                   path="/trading/inquiry/new"
@@ -100,8 +102,6 @@ export default function AppRoutes() {
                   path="/trading/deal/:id"
                   element={<DealConfirmationPage />}
                 />
-
-                <Route path="/freight" element={<FreightPage />} />
                 <Route
                   path="/freight/inquiry/new"
                   element={<FreightInquiryPage />}
@@ -169,3 +169,5 @@ export default function AppRoutes() {
     </BrowserRouter>
   );
 }
+
+

@@ -293,7 +293,7 @@ function mapDraftBL(record: BackendImportRecord, form?: BackendForm, document?: 
     id: form ? String(form.id) : `${record.id}-draft-bl`,
     shipmentId: String(record.id),
     status: form?.completed_at ? "pending_approval" : "draft",
-    audit: { createdBy: "Current User", createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
+    audit: { createdBy: userDisplayName(), createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
     draftBlNo: data.draftBlNo ?? "",
     bookingNo: data.bookingNo ?? "",
     vessel: data.vessel ?? "",
@@ -325,7 +325,7 @@ function mapHouseBL(record: BackendImportRecord, form?: BackendForm, document?: 
     id: form ? String(form.id) : `${record.id}-house-bl`,
     shipmentId: String(record.id),
     status: form?.completed_at ? "pending_approval" : "draft",
-    audit: { createdBy: "Current User", createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
+    audit: { createdBy: userDisplayName(), createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
     hblNumber: data.hblNumber ?? "",
     bookingNumber: data.bookingNumber ?? "",
     serviceContract: data.serviceContract ?? "",
@@ -361,7 +361,7 @@ function mapMasterBL(record: BackendImportRecord, form?: BackendForm, document?:
     id: form ? String(form.id) : `${record.id}-master-bl`,
     shipmentId: String(record.id),
     status: form?.completed_at ? "pending_approval" : "draft",
-    audit: { createdBy: "Current User", createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
+    audit: { createdBy: userDisplayName(), createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
     shippingLine: data.shippingLine ?? "",
     mblNumber: data.mblNumber ?? "",
     bookingNumber: data.bookingNumber ?? "",
@@ -406,7 +406,7 @@ function mapFreightInvoice(
     id: String(invoice.id),
     shipmentId: String(record.id),
     status: "draft",
-    audit: { createdBy: invoice.created_by ? `User #${invoice.created_by}` : "Current User", createdDate: invoice.created_at, modifiedDate: invoice.updated_at },
+    audit: { createdBy: userDisplayName(invoice.created_by), createdDate: invoice.created_at, modifiedDate: invoice.updated_at },
     hblNumber: stringValue(autoFields.hbl_no) || houseBL?.hblNumber || "",
     mblNumber: stringValue(autoFields.mbl_no) || masterBL?.mblNumber || "",
     containerNumber: stringValue(autoFields.container_no) || source?.containers?.[0]?.containerNo || "",
@@ -442,7 +442,7 @@ function mapPaymentReceipt(record: BackendImportRecord, receipt: BackendPaymentR
     id: String(receipt.id),
     shipmentId: String(record.id),
     status: "draft",
-    audit: { createdBy: receipt.created_by ? `User #${receipt.created_by}` : "Current User", createdDate: receipt.created_at },
+    audit: { createdBy: userDisplayName(receipt.created_by), createdDate: receipt.created_at },
     receiptNo: receipt.receipt_no ?? "",
     tid: receipt.tid,
     amount: Number(receipt.amount ?? 0),
@@ -458,7 +458,7 @@ function mapDetentionInvoice(record: BackendImportRecord, invoice: BackendDetent
     id: String(invoice.id),
     shipmentId: String(record.id),
     status: "draft",
-    audit: { createdBy: invoice.created_by ? `User #${invoice.created_by}` : "Current User", createdDate: invoice.created_at, modifiedDate: invoice.updated_at },
+    audit: { createdBy: userDisplayName(invoice.created_by), createdDate: invoice.created_at, modifiedDate: invoice.updated_at },
     invoiceNo: invoice.invoice_no ?? "",
     detentionStart: invoice.detention_start,
     detentionEnd: invoice.detention_end,
@@ -480,10 +480,14 @@ function mapDocumentToPdf(document: BackendDocument): PdfAttachment {
     fileSize: document.file_size,
     blobUrl: "",
     uploadedAt: document.uploaded_at,
-    uploadedBy: document.uploaded_by ? `User #${document.uploaded_by}` : "Current User",
+    uploadedBy: userDisplayName(document.uploaded_by),
   };
 }
 
+
+function userDisplayName(userId?: number | null) {
+  return userId ? "Team member" : "System";
+}
 function mapChargeLine(charge: Record<string, unknown>, index: number): ChargeLine {
   const notes = stringValue(charge.notes);
   const rateMatch = notes.match(/Rate:\s*([\d.]+)/i);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Clock, Save } from "lucide-react";
+import { ArrowLeft, Clock, Save, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useImportStore } from "../../store/importStore";
@@ -29,6 +29,7 @@ export default function DetentionInvoiceForm() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!shipment) void loadShipments();
@@ -79,11 +80,16 @@ export default function DetentionInvoiceForm() {
       alert("Please fill in all mandatory fields before saving detention invoice.");
       return;
     }
-    await saveDetentionInvoice(
-      id!,
-      form as Omit<DetentionInvoice, "id" | "shipmentId" | "status" | "audit" | "chargeableDays" | "detentionAmount" | "refundAmount" | "renderData">,
-    );
-    navigate(`/trading/imports/${id}`);
+    setIsSaving(true);
+    try {
+      await saveDetentionInvoice(
+        id!,
+        form as Omit<DetentionInvoice, "id" | "shipmentId" | "status" | "audit" | "chargeableDays" | "detentionAmount" | "refundAmount" | "renderData">,
+      );
+      navigate(`/trading/imports/${id}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!shipment) {
@@ -123,10 +129,11 @@ export default function DetentionInvoiceForm() {
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition hover:bg-amber-600"
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Save className="h-4 w-4" />
-            Save Detention
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {isSaving ? "Saving Detention..." : "Save Detention"}
           </button>
         </div>
 
@@ -265,3 +272,5 @@ export default function DetentionInvoiceForm() {
     </AppLayout>
   );
 }
+
+

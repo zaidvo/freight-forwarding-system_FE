@@ -52,7 +52,7 @@ export type AppModule = {
 
 export type Role = Group;
 
-export type AuditAction = "create" | "update" | "delete";
+export type AuditAction = "create" | "update" | "delete" | "login" | "security";
 
 export type AuditLog = {
   id: string;
@@ -62,3 +62,4 @@ export type AuditLog = {
   description: string;
   timestamp: string;
 };
+

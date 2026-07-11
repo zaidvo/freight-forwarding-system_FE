@@ -1,164 +1,51 @@
-// src/modules/dashboard/pages/DashboardPage.tsx
-//
-// Dashboard shows fixed 5-tile module grid (Account Management, Operations,
-// Finance, Sales, Marketing) — same for both companies.
-// KPI strip above the tiles is company-aware.
-
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useCompany } from "@/app/providers/CompanyProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
-import { useTradingStore } from "@/companies/trading/store/tradingStore";
-import { useFreightStore } from "@/companies/freight/store/freightStore";
 import { ModuleTile } from "../components/ModuleTile";
 import { FREIGHT_MODULES, TRADING_MODULES } from "../data/modules";
-import {
-  Ship,
-  Package,
-  FileText,
-  HandshakeIcon,
-  CheckCircle,
-  TrendingUp,
-  ShoppingCart,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
-// ─── KPI strip ───────────────────────────────────────────────────
-type KpiCard = {
-  label: string;
-  value: number;
-  icon: LucideIcon;
-  color: string;
-  bg: string;
-};
-
-function KpiStrip({ kpis }: { kpis: KpiCard[] }) {
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {kpis.map(({ label, value, icon: Icon, color, bg }) => (
-        <div
-          key={label}
-          className="flex items-center gap-3 rounded-[14px] border border-slate-200 bg-white px-4 py-3 shadow-[0_4px_14px_rgba(22,31,54,0.04)]"
-        >
-          <div
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] ${bg}`}
-          >
-            <Icon className={`h-4 w-4 ${color}`} />
-          </div>
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-              {label}
-            </div>
-            <div className="text-[20px] font-bold tracking-[-0.03em] text-slate-900">
-              {value}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Page ────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { isFreight } = useCompany();
   const { user, hasModuleAccess } = useAuth();
-  const { inquiries, deals } = useTradingStore();
-  const { shipments, inquiries: freightInquiries } = useFreightStore();
 
   const firstName = user?.full_name?.split(" ")[0] ?? "there";
-
-  const freightKpis: KpiCard[] = [
-    {
-      label: "Total Shipments",
-      value: shipments.length,
-      icon: Package,
-      color: "text-blue-500",
-      bg: "bg-blue-50",
-    },
-    {
-      label: "In Transit",
-      value: shipments.filter((s) => s.status === "in_transit").length,
-      icon: Ship,
-      color: "text-sky-500",
-      bg: "bg-sky-50",
-    },
-    {
-      label: "Completed",
-      value: shipments.filter((s) => s.status === "completed").length,
-      icon: CheckCircle,
-      color: "text-emerald-500",
-      bg: "bg-emerald-50",
-    },
-    {
-      label: "Inquiries",
-      value: freightInquiries.length,
-      icon: FileText,
-      color: "text-amber-500",
-      bg: "bg-amber-50",
-    },
-  ];
-
-  const tradingKpis: KpiCard[] = [
-    {
-      label: "Inquiries",
-      value: inquiries.length,
-      icon: ShoppingCart,
-      color: "text-sky-500",
-      bg: "bg-sky-50",
-    },
-    {
-      label: "Quoted",
-      value: inquiries.filter((i) => i.status === "quoted").length,
-      icon: TrendingUp,
-      color: "text-amber-500",
-      bg: "bg-amber-50",
-    },
-    {
-      label: "Deals Confirmed",
-      value: deals.filter((d) => d.status === "deal_confirmed").length,
-      icon: HandshakeIcon,
-      color: "text-emerald-500",
-      bg: "bg-emerald-50",
-    },
-    {
-      label: "Completed",
-      value: deals.filter((d) => d.status === "trading_completed").length,
-      icon: CheckCircle,
-      color: "text-green-500",
-      bg: "bg-green-50",
-    },
-  ];
-
-  const kpis = isFreight ? freightKpis : tradingKpis;
   const modules = isFreight ? FREIGHT_MODULES : TRADING_MODULES;
   const visibleModules = modules.filter((m) => hasModuleAccess(m.slug));
 
   return (
     <AppLayout>
-      <div className="max-w-none">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-[20px] font-bold tracking-[-0.03em] text-slate-900">
+      <div className="mx-auto max-w-6xl space-y-7">
+        <section className="rounded-[18px] border border-slate-200 bg-white px-6 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-500">
+            {isFreight ? "Freight Forwarding" : "Import / Export"}
+          </p>
+          <h1 className="mt-2 text-[24px] font-bold tracking-[-0.04em] text-slate-950">
             Welcome back, {firstName}
           </h1>
-          <p className="mt-1 text-[14px] text-slate-500">
+          <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-500">
             {isFreight
-              ? "Manage freight operations, shipments, documents and finance."
-              : "Manage the full trading pipeline from inquiry to deal confirmation."}
+              ? "Continue with freight operations, shipment documents, and finance from one workspace."
+              : "Continue with trading operations, import shipments, and sales documents from one workspace."}
           </p>
-        </div>
+        </section>
 
-        {/* KPI strip */}
-        <div className="mb-8">
-          <KpiStrip kpis={kpis} />
-        </div>
+        <section>
+          <div className="mb-4">
+            <h2 className="text-[16px] font-bold tracking-[-0.02em] text-slate-900">
+              Modules
+            </h2>
+            <p className="mt-1 text-[13px] text-slate-500">
+              Open the areas assigned to your account.
+            </p>
+          </div>
 
-        {/* Module tiles — company-specific */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {visibleModules.map((m) => (
-            <ModuleTile key={m.name} m={m} />
-          ))}
-        </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {visibleModules.map((m) => (
+              <ModuleTile key={m.name} m={m} />
+            ))}
+          </div>
+        </section>
+
         {visibleModules.length === 0 && (
           <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-8 text-sm text-slate-500 shadow-[0_8px_24px_rgba(22,31,54,0.05)]">
             No modules are assigned to your account.

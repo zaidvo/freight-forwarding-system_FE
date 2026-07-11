@@ -1,7 +1,7 @@
 // src/companies/trading/components/import/ImportClearingInvoiceForm.tsx
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Save, Send, Receipt, Zap, FileDown } from "lucide-react";
+import { ArrowLeft, Save, Receipt, Zap, FileDown, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useImportStore, defaultChargeLines, numberToWords } from "../../store/importStore";
@@ -65,6 +65,7 @@ export default function ImportClearingInvoiceForm() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const subtotal = charges.reduce((acc, curr) => acc + (curr.amount || 0), 0);
@@ -92,26 +93,22 @@ export default function ImportClearingInvoiceForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
-    await saveClearingInvoice(id!, {
-      ...form,
-      charges,
-      ...totals
-    } as Omit<ImportClearingInvoice, "id" | "shipmentId" | "status" | "audit">);
-    navigate(`/trading/imports/${id}`);
-  };
-
   const handleSubmit = async () => {
     if (!validateForm()) {
-      alert("Please fill in all mandatory fields before submitting.");
+      alert("Please fill in all mandatory fields before saving invoice.");
       return;
     }
-    await saveClearingInvoice(id!, {
-      ...form,
-      charges,
-      ...totals
-    } as Omit<ImportClearingInvoice, "id" | "shipmentId" | "status" | "audit">);
-    navigate(`/trading/imports/${id}`);
+    setIsSaving(true);
+    try {
+      await saveClearingInvoice(id!, {
+        ...form,
+        charges,
+        ...totals
+      } as Omit<ImportClearingInvoice, "id" | "shipmentId" | "status" | "audit">);
+      navigate(`/trading/imports/${id}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleGeneratePdf = () => {
@@ -183,19 +180,12 @@ export default function ImportClearingInvoiceForm() {
             </button>
             <button
               type="button"
-              onClick={handleSave}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50"
-            >
-              <Save className="h-4 w-4" />
-              Save Draft
-            </button>
-            <button
-              type="button"
               onClick={handleSubmit}
-              className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(244,63,94,0.3)] transition hover:bg-rose-600"
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(244,63,94,0.3)] transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <Send className="h-4 w-4" />
-              Submit
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {isSaving ? "Saving Invoice..." : "Save Invoice"}
             </button>
           </div>
         </div>
@@ -360,3 +350,5 @@ export default function ImportClearingInvoiceForm() {
     </AppLayout>
   );
 }
+
+
