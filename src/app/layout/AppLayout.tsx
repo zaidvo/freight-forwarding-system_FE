@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
-  Bell,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -18,6 +17,7 @@ import {
   FileText,
   HandshakeIcon,
   LayoutGrid,
+  Loader2,
   LogOut,
   Receipt,
   Ship,
@@ -160,9 +160,16 @@ const TRADING_NAV: NavSection[] = [
       },
     ],
   },
+
   {
     title: "Sales",
     items: [
+      {
+        label: "Import Shipments",
+        to: "/trading/imports",
+        icon: Ship,
+        moduleSlug: "sales",
+      },
       {
         label: "Quotation",
         to: "/trading/quotation/new",
@@ -223,6 +230,10 @@ const PAGE_LABELS: Record<string, string> = {
   "/trading/pi/new": "Proforma Invoice",
   "/trading/po/new": "Purchase Order",
   "/trading/deal/new": "Deal Confirmation",
+  "/trading/imports": "Import Shipments",
+  "/trading/imports/:id/invoice": "Freight Invoice",
+  "/trading/imports/:id/payment-receipt": "Payment Receipt",
+  "/trading/imports/:id/detention-invoice": "Detention Invoice",
   "/freight": "Freight Operations",
   "/freight/inquiry/new": "New Freight Inquiry",
   "/freight/quotation/new": "Freight Quotation",
@@ -241,7 +252,10 @@ export function AppLayout({ children }: LayoutProps) {
     () => window.localStorage.getItem("freightos-sidebar-collapsed") === "true",
   );
   const [companyOpen, setCompanyOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const companySwitcherRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -263,6 +277,19 @@ export function AppLayout({ children }: LayoutProps) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [companyOpen]);
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(e.target as Node)
+      ) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileOpen]);
 
   const baseNavSections = isFreight ? FREIGHT_NAV : TRADING_NAV;
   const navSections = useMemo(
@@ -299,8 +326,14 @@ export function AppLayout({ children }: LayoutProps) {
     : "??";
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/login", { replace: true });
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   // Determine active section for highlighting section header
@@ -320,17 +353,17 @@ export function AppLayout({ children }: LayoutProps) {
       <div className="flex min-h-screen overflow-hidden bg-white/60">
         {/* ── SIDEBAR ── */}
         <aside
-          className={`relative flex shrink-0 flex-col border-r border-slate-200/80 bg-white transition-[width] duration-200 ease-in-out ${
+          className={`relative flex shrink-0 flex-col border-r border-slate-900 bg-slate-950 transition-[width] duration-200 ease-in-out ${
             collapsed ? "w-[68px]" : "w-[224px]"
           }`}
         >
           {/* Logo */}
-          <div className="flex h-[60px] items-center gap-2.5 border-b border-slate-200/80 px-4">
-            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-blue-500 text-white shadow-[0_6px_16px_rgba(59,130,246,0.28)]">
+          <div className="flex h-[60px] items-center gap-2.5 border-b border-white/10 px-4">
+            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-sky-500 text-white shadow-[0_6px_16px_rgba(14,165,233,0.28)]">
               <LayoutGrid className="h-3.5 w-3.5" />
             </div>
             {!collapsed && (
-              <span className="select-none text-[16px] font-bold tracking-[-0.02em] text-slate-900">
+              <span className="select-none text-[16px] font-bold tracking-[-0.02em] text-white">
                 FreightOS
               </span>
             )}
@@ -345,8 +378,8 @@ export function AppLayout({ children }: LayoutProps) {
                     className={[
                       "mb-1 px-3 text-[10.5px] font-semibold uppercase tracking-[0.14em]",
                       activeSectionTitle === section.title
-                        ? "text-blue-500"
-                        : "text-slate-400/80",
+                        ? "text-sky-300"
+                        : "text-slate-500",
                     ].join(" ")}
                   >
                     {section.title}
@@ -365,10 +398,10 @@ export function AppLayout({ children }: LayoutProps) {
                         className={[
                           "flex items-center gap-3 rounded-[8px] px-2.5 py-2 text-[13px] font-medium transition-colors",
                           active
-                            ? "bg-blue-50 text-blue-600"
+                            ? "bg-white/10 text-white shadow-[inset_3px_0_0_rgba(56,189,248,0.95)]"
                             : item.soon
-                              ? "cursor-default text-slate-300"
-                              : "text-slate-500 hover:bg-slate-50 hover:text-slate-800",
+                              ? "cursor-default text-slate-600"
+                              : "text-slate-300 hover:bg-white/10 hover:text-white",
                           collapsed ? "justify-center" : "",
                         ].join(" ")}
                       >
@@ -376,9 +409,9 @@ export function AppLayout({ children }: LayoutProps) {
                           className={[
                             "h-[17px] w-[17px] shrink-0",
                             active
-                              ? "text-blue-500"
+                              ? "text-sky-300"
                               : item.soon
-                                ? "text-slate-300"
+                                ? "text-slate-600"
                                 : "text-slate-400",
                           ].join(" ")}
                         />
@@ -415,45 +448,29 @@ export function AppLayout({ children }: LayoutProps) {
           </nav>
 
           {/* User footer */}
-          <div className="border-t border-slate-200/80 px-2 py-3">
+          <div className="border-t border-white/10 px-2 py-3">
             {collapsed ? (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex justify-center">
                 <div
                   title={user?.full_name}
                   className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-[12px] font-bold text-blue-600"
                 >
                   {avatarInitials}
                 </div>
-                <button
-                  type="button"
-                  title="Sign out"
-                  onClick={handleLogout}
-                  className="grid h-7 w-7 place-items-center rounded-[6px] text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2.5 rounded-[8px] px-2 py-2 hover:bg-slate-50 transition-colors">
+              <div className="flex items-center gap-2.5 rounded-[8px] px-2 py-2 transition-colors hover:bg-white/10">
                 <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-[12px] font-bold text-blue-600">
                   {avatarInitials}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold text-slate-800">
-                    {user?.full_name ?? "—"}
+                  <p className="truncate text-[13px] font-semibold text-white">
+                    {user?.full_name ?? "-"}
                   </p>
                   <p className="text-[11px] capitalize text-slate-400">
                     {user?.role ?? ""}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  title="Sign out"
-                  onClick={handleLogout}
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-[6px] text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                </button>
               </div>
             )}
           </div>
@@ -537,21 +554,47 @@ export function AppLayout({ children }: LayoutProps) {
               <span className="font-medium text-slate-600">{currentPage}</span>
             </div>
 
-            {/* Right actions */}
-            <div className="ml-auto flex items-center gap-2">
+            {/* Profile actions */}
+            <div ref={profileMenuRef} className="relative ml-auto">
               <button
                 type="button"
-                className="relative grid h-8 w-8 place-items-center rounded-[8px] border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full border-[1.5px] border-white bg-emerald-500" />
-              </button>
-              <div
                 title={user?.full_name}
-                className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-sky-100 to-sky-200 text-[12px] font-bold text-sky-600 cursor-default select-none"
+                onClick={() => setProfileOpen((open) => !open)}
+                className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-sky-100 to-sky-200 text-[12px] font-bold text-sky-600 transition ring-blue-100 hover:ring-4"
               >
                 {avatarInitials}
-              </div>
+              </button>
+
+              {profileOpen && (
+                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[220px] rounded-[10px] border border-slate-200 bg-white p-2 shadow-[0_10px_30px_rgba(22,31,54,0.14)]">
+                  <div className="flex items-center gap-2.5 rounded-[8px] px-2 py-2">
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sky-100 to-sky-200 text-[12px] font-bold text-sky-600">
+                      {avatarInitials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-semibold text-slate-800">
+                        {user?.full_name ?? "-"}
+                      </p>
+                      <p className="text-[11px] capitalize text-slate-400">
+                        {user?.role ?? ""}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="mt-1 flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[13px] font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {loggingOut ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <LogOut className="h-3.5 w-3.5" />
+                    )}
+                    {loggingOut ? "Logging out..." : "Logout"}
+                  </button>
+                </div>
+              )}
             </div>
           </header>
 
@@ -565,3 +608,9 @@ export function AppLayout({ children }: LayoutProps) {
 }
 
 export default AppLayout;
+
+
+
+
+
+

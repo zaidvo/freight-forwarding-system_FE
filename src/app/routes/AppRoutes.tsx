@@ -41,6 +41,16 @@ import FreightBookingPage from "@/companies/freight/pages/FreightBookingPage";
 import FreightShipmentFormPage from "@/companies/freight/pages/FreightShipmentFormPage";
 import ShipmentDetailPage from "@/companies/freight/pages/ShipmentDetailPage";
 
+// Trading Import workflow
+import ImportListPage from "@/companies/trading/pages/ImportListPage";
+import ImportWorkspacePage from "@/companies/trading/pages/ImportWorkspacePage";
+import DraftBLForm from "@/companies/trading/components/import/DraftBLForm";
+import HouseBLForm from "@/companies/trading/components/import/HouseBLForm";
+import MasterBLForm from "@/companies/trading/components/import/MasterBLForm";
+import ImportClearingInvoiceForm from "@/companies/trading/components/import/ImportClearingInvoiceForm";
+import PaymentReceiptForm from "@/companies/trading/components/import/PaymentReceiptForm";
+import DetentionInvoiceForm from "@/companies/trading/components/import/DetentionInvoiceForm";
+
 export default function AppRoutes() {
   return (
     <BrowserRouter>
@@ -73,6 +83,8 @@ export default function AppRoutes() {
                   element={<BillOfLadingPage />}
                 />
 
+                <Route path="/freight" element={<FreightPage />} />
+
                 <Route path="/trading" element={<TradingPage />} />
                 <Route
                   path="/trading/inquiry/new"
@@ -90,8 +102,6 @@ export default function AppRoutes() {
                   path="/trading/deal/:id"
                   element={<DealConfirmationPage />}
                 />
-
-                <Route path="/freight" element={<FreightPage />} />
                 <Route
                   path="/freight/inquiry/new"
                   element={<FreightInquiryPage />}
@@ -138,6 +148,16 @@ export default function AppRoutes() {
                 />
                 <Route path="/trading/po/new" element={<PurchaseOrderPage />} />
                 <Route path="/trading/po/:id" element={<PurchaseOrderPage />} />
+                
+                {/* Trading Imports Workflow */}
+                <Route path="/trading/imports" element={<ImportListPage />} />
+                <Route path="/trading/imports/:id" element={<ImportWorkspacePage />} />
+                <Route path="/trading/imports/:id/draft-bl" element={<DraftBLForm />} />
+                <Route path="/trading/imports/:id/hbl" element={<HouseBLForm />} />
+                <Route path="/trading/imports/:id/mbl" element={<MasterBLForm />} />
+                <Route path="/trading/imports/:id/invoice" element={<ImportClearingInvoiceForm />} />
+                <Route path="/trading/imports/:id/payment-receipt" element={<PaymentReceiptForm />} />
+                <Route path="/trading/imports/:id/detention-invoice" element={<DetentionInvoiceForm />} />
               </Route>
             </Route>
 
@@ -149,3 +169,5 @@ export default function AppRoutes() {
     </BrowserRouter>
   );
 }
+
+

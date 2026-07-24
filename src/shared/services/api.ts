@@ -1,4 +1,4 @@
-const API_BASE_URL =
+export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
 
 const TOKEN_KEY = "freighterp_access_token";
@@ -46,6 +46,32 @@ export type BackendGroup = {
   updated_at: string;
 };
 
+
+export type BackendActivityAction =
+  | "login"
+  | "logout"
+  | "failed_login"
+  | "create_user"
+  | "update_user"
+  | "deactivate_user"
+  | "change_password"
+  | "forgot_password"
+  | "reset_password";
+
+export type BackendActivityLog = {
+  id: number;
+  actor_user_id: number | null;
+  actor_name: string | null;
+  actor_email: string | null;
+  action: BackendActivityAction;
+  target_user_id: number | null;
+  target_name: string | null;
+  target_email: string | null;
+  success: boolean;
+  description: string | null;
+  ip_address: string | null;
+  created_at: string;
+};
 export type LoginResponse = {
   access_token: string;
   token_type: "bearer";
@@ -111,3 +137,64 @@ export async function apiRequest<T>(
 
   return body.data as T;
 }
+export async function apiUploadRequest<T>(
+  path: string,
+  formData: FormData,
+  options: RequestInit = {},
+): Promise<T> {
+  const headers = new Headers(options.headers);
+
+  const token = getAuthToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    method: options.method ?? "POST",
+    headers,
+    body: formData,
+  });
+  const body = (await response.json().catch(() => null)) as
+    | ApiEnvelope<T>
+    | { detail?: string }
+    | null;
+
+  if (!response.ok) {
+    const message =
+      body && "detail" in body && body.detail
+        ? body.detail
+        : body && "message" in body
+          ? body.message
+          : "Request failed";
+    throw new Error(message);
+  }
+
+  if (!body || !("data" in body)) {
+    return undefined as T;
+  }
+
+  return body.data as T;
+}
+
+export async function apiBlobRequest(path: string, options: RequestInit = {}): Promise<Blob> {
+  const headers = new Headers(options.headers);
+
+  const token = getAuthToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { detail?: string; message?: string } | null;
+    throw new Error(body?.detail ?? body?.message ?? "Request failed");
+  }
+
+  return response.blob();
+}
+

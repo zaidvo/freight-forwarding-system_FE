@@ -8,7 +8,7 @@
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useCompany } from "@/app/providers/CompanyProvider";
-import { Receipt, TrendingUp, FileText, ShoppingCart } from "lucide-react";
+import { Receipt, TrendingUp, FileText, ShoppingCart, Ship } from "lucide-react";
 
 type SaleMod = {
   label: string;
@@ -41,6 +41,14 @@ const FREIGHT_SALES: SaleMod[] = [
 ];
 
 const TRADING_SALES: SaleMod[] = [
+  {
+    label: "Import Shipments",
+    description: "Manage the complete import lifecycle and document flow.",
+    icon: Ship,
+    route: "/trading/imports",
+    accent: "bg-sky-50",
+    iconColor: "text-sky-500",
+  },
   {
     label: "Quotation",
     description: "Create and send quotations from buyer inquiries.",

@@ -13,111 +13,14 @@
 
 import type { TradingInquiry, Quotation, PurchaseOrder, Deal } from "../types";
 
-const now = new Date().toISOString();
-const today = now.split("T")[0];
 
-export const SEED_INQUIRIES: TradingInquiry[] = [
-  {
-    id: "TI-2025-001",
-    buyer: "Global Traders LLC",
-    contactPerson: "Ahmed Khan",
-    email: "ahmed@globaltraders.com",
-    phone: "+92 321 1234567",
-    product: "Cotton Yarn",
-    quantity: 500,
-    unit: "MT",
-    destinationCountry: "Germany",
-    inquiryDate: today,
-    notes: "Urgent shipment required before end of month.",
-    assignedSalesperson: "Ali Hassan",
-    status: "inquiry_received",
-    auditTrail: [
-      { timestamp: now, user: "Ali Hassan", action: "Inquiry submitted" },
-    ],
-    createdAt: now,
-  },
-  {
-    id: "TI-2025-002",
-    buyer: "Euro Imports GmbH",
-    contactPerson: "Hans Müller",
-    email: "hans@euroimports.de",
-    phone: "+49 30 9876543",
-    product: "Rice (Basmati)",
-    quantity: 1000,
-    unit: "MT",
-    destinationCountry: "Netherlands",
-    inquiryDate: today,
-    notes: "Long-term supply contract possible.",
-    assignedSalesperson: "Sara Khan",
-    status: "quoted",
-    auditTrail: [
-      { timestamp: now, user: "Sara Khan", action: "Inquiry submitted" },
-      { timestamp: now, user: "Sara Khan", action: "Quotation generated" },
-    ],
-    createdAt: now,
-  },
-  {
-    id: "TI-2025-003",
-    buyer: "Dubai Commodities Co.",
-    contactPerson: "Yousuf Al-Rashid",
-    email: "yousuf@dubaicommodities.ae",
-    phone: "+971 50 3456789",
-    product: "Surgical Instruments",
-    quantity: 10000,
-    unit: "PCS",
-    destinationCountry: "UAE",
-    inquiryDate: today,
-    notes: "Medical grade required.",
-    assignedSalesperson: "Omar Farooq",
-    status: "deal_confirmed",
-    auditTrail: [
-      { timestamp: now, user: "Omar Farooq", action: "Inquiry submitted" },
-      { timestamp: now, user: "Omar Farooq", action: "Quotation generated" },
-      { timestamp: now, user: "Omar Farooq", action: "PI issued" },
-      { timestamp: now, user: "Manager", action: "Deal confirmed" },
-    ],
-    createdAt: now,
-  },
-];
+export const SEED_INQUIRIES: TradingInquiry[] = [];
 
-export const SEED_QUOTATIONS: Quotation[] = [
-  {
-    id: "QT-2025-001",
-    inquiryId: "TI-2025-002",
-    customer: "Euro Imports GmbH",
-    product: "Rice (Basmati)",
-    quantity: 1000,
-    unitPrice: 850,
-    currency: "USD",
-    incoterms: "FOB",
-    paymentTerms: "50% advance, 50% against B/L copy",
-    validUntil: "2025-08-31",
-    remarks: "Price valid for 30 days.",
-    status: "quoted",
-    auditTrail: [
-      { timestamp: now, user: "Sara Khan", action: "Quotation generated" },
-    ],
-    createdAt: now,
-  },
-];
+export const SEED_QUOTATIONS: Quotation[] = [];
 
 export const SEED_PURCHASE_ORDERS: PurchaseOrder[] = [];
 
-export const SEED_DEALS: Deal[] = [
-  {
-    id: "DEAL-2025-001",
-    inquiryId: "TI-2025-003",
-    poId: "PO-2025-001",
-    customer: "Dubai Commodities Co.",
-    product: "Surgical Instruments",
-    quantity: 10000,
-    totalValue: 250000,
-    currency: "USD",
-    status: "deal_confirmed",
-    auditTrail: [{ timestamp: now, user: "Manager", action: "Deal approved" }],
-    createdAt: now,
-  },
-];
+export const SEED_DEALS: Deal[] = [];
 
 // ─── Status label map ─────────────────────────────────────────────
 export const STATUS_LABELS: Record<string, string> = {
@@ -155,3 +58,5 @@ export const generatePOId = () =>
   `PO-${year}-${String(Math.floor(Math.random() * 900) + 100)}`;
 export const generateDealId = () =>
   `DEAL-${year}-${String(Math.floor(Math.random() * 900) + 100)}`;
+
+
