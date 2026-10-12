@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   TrendingUp,
   Receipt,
+  Handshake,
   type LucideIcon,
 } from "lucide-react";
 
@@ -73,3 +74,25 @@ export const TRADING_MODULES: ModuleDef[] = [
     ready: true,
   },
 ];
+
+// ─── Indenting tiles ──────────────────────────────────────────────
+export const INDENTING_MODULES: ModuleDef[] = [
+  ACCOUNT_MANAGEMENT,
+  {
+    name: "Indenting Deals",
+    slug: "indenting",
+    icon: Handshake,
+    color: "#d97706",
+    to: "/indenting",
+    ready: true,
+  },
+  {
+    name: "Parties Directory",
+    slug: "indenting",
+    icon: Users,
+    color: "#059669",
+    to: "/indenting/parties",
+    ready: true,
+  },
+];
+

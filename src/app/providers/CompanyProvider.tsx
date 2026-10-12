@@ -10,7 +10,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 // ─── Types ───────────────────────────────────────────────────────
-export type CompanyId = "freight-forwarding" | "import-export";
+export type CompanyId = "freight-forwarding" | "import-export" | "indenting";
 
 export type Company = {
   id: CompanyId;
@@ -25,6 +25,7 @@ export const COMPANIES: Company[] = [
     accent: "bg-emerald-500",
   },
   { id: "import-export", name: "Trading", accent: "bg-sky-500" },
+  { id: "indenting", name: "Indenting", accent: "bg-amber-500" },
 ];
 
 type CompanyContextValue = {
@@ -32,6 +33,7 @@ type CompanyContextValue = {
   setActiveCompanyId: (id: CompanyId) => void;
   isFreight: boolean;
   isTrading: boolean;
+  isIndenting: boolean;
 };
 
 // ─── Context ─────────────────────────────────────────────────────
@@ -60,6 +62,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         setActiveCompanyId: handleSetCompany,
         isFreight: activeCompanyId === "freight-forwarding",
         isTrading: activeCompanyId === "import-export",
+        isIndenting: activeCompanyId === "indenting",
       }}
     >
       {children}
