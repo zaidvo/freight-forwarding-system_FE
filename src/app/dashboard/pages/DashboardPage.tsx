@@ -17,7 +17,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-6xl space-y-7">
         <section className="rounded-[18px] border border-slate-200 bg-white px-6 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-500">
-            {isFreight ? "Freight Forwarding" : "Import / Export"}
+            {isFreight ? "Freight Forwarding" : "Trading"}
           </p>
           <h1 className="mt-2 text-[24px] font-bold tracking-[-0.04em] text-slate-950">
             Welcome back, {firstName}

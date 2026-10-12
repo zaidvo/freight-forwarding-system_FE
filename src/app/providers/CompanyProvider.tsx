@@ -24,7 +24,7 @@ export const COMPANIES: Company[] = [
     name: "Freight Forwarding",
     accent: "bg-emerald-500",
   },
-  { id: "import-export", name: "Import / Export", accent: "bg-sky-500" },
+  { id: "import-export", name: "Trading", accent: "bg-sky-500" },
 ];
 
 type CompanyContextValue = {

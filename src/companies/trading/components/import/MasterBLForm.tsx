@@ -10,6 +10,7 @@ import { useImportStore, emptyContainer } from "../../store/importStore";
 import ContainerTable from "./ContainerTable";
 import PdfUploadSection from "./PdfUploadSection";
 import DocumentStatusBadge from "./DocumentStatusBadge";
+import SaveFeedback from "@/shared/components/SaveFeedback";
 import type { ContainerRow, PdfAttachment, MasterBL } from "../../types/importTypes";
 import { downloadImportPdf } from "../../services/tradingImportService";
 
@@ -58,6 +59,10 @@ export default function MasterBLForm() {
   const [pdf, setPdf] = useState<PdfAttachment | undefined>(existing?.pdf);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savingMode, setSavingMode] = useState<"draft" | "complete" | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const set = (field: string, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -128,10 +133,17 @@ export default function MasterBLForm() {
 
   const handleSave = async () => {
     if (savingMode) return;
+    setFeedback(null);
     setSavingMode("draft");
     try {
       await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, isComplete);
-      navigate(`/trading/imports/${id}`);
+      setFeedback({ type: "success", message: "Master BL saved successfully." });
+      window.setTimeout(() => navigate(`/trading/imports/${id}`), 500);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : "Could not save the Master BL.",
+      });
     } finally {
       setSavingMode(null);
     }
@@ -139,14 +151,21 @@ export default function MasterBLForm() {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      alert("Please fill in all mandatory fields before marking complete.");
+      setFeedback({ type: "error", message: "Complete the mandatory fields before marking this document complete." });
       return;
     }
     if (savingMode) return;
+    setFeedback(null);
     setSavingMode("complete");
     try {
       await saveMasterBL(id!, { ...form, containers, pdf } as Omit<MasterBL, "id" | "shipmentId" | "status" | "audit">, true);
-      navigate(`/trading/imports/${id}`);
+      setFeedback({ type: "success", message: "Master BL marked complete." });
+      window.setTimeout(() => navigate(`/trading/imports/${id}`), 500);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : "Could not complete the Master BL.",
+      });
     } finally {
       setSavingMode(null);
     }
@@ -225,6 +244,8 @@ export default function MasterBLForm() {
             </button>
           </div>
         </div>
+
+        {feedback && <SaveFeedback type={feedback.type} message={feedback.message} />}
 
         {/* Auto-fill notice */}
         {hbl && !existing && (

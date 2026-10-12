@@ -12,6 +12,12 @@ const STATUS_CONFIG: Record<
     text: "text-slate-600",
     dot: "bg-slate-400",
   },
+  received: {
+    label: "Received",
+    bg: "bg-sky-50",
+    text: "text-sky-700",
+    dot: "bg-sky-500",
+  },
   pending_approval: {
     label: "Completed",
     bg: "bg-emerald-50",

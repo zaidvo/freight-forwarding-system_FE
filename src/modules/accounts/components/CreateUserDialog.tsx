@@ -50,7 +50,7 @@ export default function CreateUserDialog({
           New user
         </h2>
         <p className="mt-1 text-[13px] text-slate-500">
-          Add a FreightOS user using the backend user fields.
+          Add a B2B Global Supplies user using the backend user fields.
         </p>
       </div>
 

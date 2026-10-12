@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="B2B Global Supplies">
+  <defs>
+    <linearGradient id="b2b" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0ea5e9" />
+      <stop offset="1" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#b2b)" />
+  <path d="M17 16h14.5c6.9 0 11.5 3.4 11.5 8.7 0 3.1-1.6 5.5-4.3 6.9 3.7 1.2 5.8 3.8 5.8 7.4C44.5 44.6 39.7 48 32 48H17V16Zm8 6.5v6.2h6.7c3.1 0 4.8-1.1 4.8-3.2 0-2-1.7-3-4.8-3H25Zm0 12.5v6.5h7.3c3.6 0 5.3-1.1 5.3-3.3 0-2.2-1.8-3.2-5.3-3.2H25Z" fill="white" />
+</svg>

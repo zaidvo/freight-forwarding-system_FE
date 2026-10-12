@@ -8,6 +8,7 @@ import { useImportStore, emptyContainer } from "../../store/importStore";
 import ContainerTable from "./ContainerTable";
 import PdfUploadSection from "./PdfUploadSection";
 import DocumentStatusBadge from "./DocumentStatusBadge";
+import SaveFeedback from "@/shared/components/SaveFeedback";
 import type { ContainerRow, PdfAttachment, DraftBL } from "../../types/importTypes";
 import { downloadImportPdf } from "../../services/tradingImportService";
 
@@ -188,6 +189,10 @@ export default function DraftBLForm() {
   const [extractedPdfText, setExtractedPdfText] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savingMode, setSavingMode] = useState<"draft" | "complete" | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const set = (field: string, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }));
@@ -306,11 +311,18 @@ export default function DraftBLForm() {
 
   const handleSave = async () => {
     if (savingMode) return;
+    setFeedback(null);
     setSavingMode("draft");
     try {
       const payload = getPayload();
       await saveDraftBL(id!, { ...payload, containers, pdf } as Omit<DraftBL, "id" | "shipmentId" | "status" | "audit">, isComplete);
-      navigate(`/trading/imports/${id}`);
+      setFeedback({ type: "success", message: "Draft BL saved successfully." });
+      window.setTimeout(() => navigate(`/trading/imports/${id}`), 500);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : "Could not save the Draft BL.",
+      });
     } finally {
       setSavingMode(null);
     }
@@ -318,15 +330,22 @@ export default function DraftBLForm() {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      alert("Please fill in all mandatory fields before marking complete.");
+      setFeedback({ type: "error", message: "Complete the mandatory fields before marking this document complete." });
       return;
     }
     if (savingMode) return;
+    setFeedback(null);
     setSavingMode("complete");
     try {
       const payload = getPayload();
       await saveDraftBL(id!, { ...payload, containers, pdf } as Omit<DraftBL, "id" | "shipmentId" | "status" | "audit">, true);
-      navigate(`/trading/imports/${id}`);
+      setFeedback({ type: "success", message: "Draft BL marked complete." });
+      window.setTimeout(() => navigate(`/trading/imports/${id}`), 500);
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        message: error instanceof Error ? error.message : "Could not complete the Draft BL.",
+      });
     } finally {
       setSavingMode(null);
     }
@@ -423,6 +442,8 @@ export default function DraftBLForm() {
             </button>
           </div>
         </div>
+
+        {feedback && <SaveFeedback type={feedback.type} message={feedback.message} />}
 
         {/* Form Content */}
         <div className="grid gap-6 lg:grid-cols-3">

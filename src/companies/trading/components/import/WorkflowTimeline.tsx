@@ -4,7 +4,6 @@ import {
   FileCheck,
   FilePlus,
   FileText,
-  Lock,
   Receipt,
   Timer,
 } from "lucide-react";
@@ -76,18 +75,16 @@ export default function WorkflowTimeline({ shipment, onNavigate }: Props) {
         <div>
           <h3 className="text-[15px] font-bold text-slate-900">Document Flow</h3>
           <p className="mt-1 text-[12px] text-slate-500">
-            Complete each document to unlock the next step.
+            Open and update documents in any order. Final validation applies at job closure.
           </p>
         </div>
       </div>
 
       <div className="space-y-2">
-        {STEPS.map((step, index) => {
+        {STEPS.map((step) => {
           const doc = shipment[step.docKey];
           const isCreated = Boolean(doc);
           const isApproved = doc?.status === "approved";
-          const previousDoc = index > 0 ? shipment[STEPS[index - 1].docKey] : true;
-          const isLocked = !previousDoc;
           const Icon = step.icon;
 
           return (
@@ -95,12 +92,7 @@ export default function WorkflowTimeline({ shipment, onNavigate }: Props) {
               key={step.key}
               type="button"
               onClick={() => onNavigate(step.key)}
-              disabled={isLocked}
-              className={`flex w-full items-center gap-4 rounded-[14px] border px-4 py-3 text-left transition ${
-                isLocked
-                  ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400"
-                  : "border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50/40"
-              }`}
+              className="flex w-full items-center gap-4 rounded-[14px] border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-blue-200 hover:bg-blue-50/40"
             >
               <div
                 className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
@@ -108,15 +100,11 @@ export default function WorkflowTimeline({ shipment, onNavigate }: Props) {
                     ? "bg-emerald-50 text-emerald-600"
                     : isCreated
                       ? "bg-blue-50 text-blue-600"
-                      : isLocked
-                        ? "bg-slate-100 text-slate-300"
-                        : "bg-slate-50 text-slate-500"
+                      : "bg-slate-50 text-slate-500"
                 }`}
               >
                 {isApproved ? (
                   <Check className="h-4 w-4" />
-                ) : isLocked ? (
-                  <Lock className="h-4 w-4" />
                 ) : (
                   <Icon className="h-4 w-4" />
                 )}
@@ -124,7 +112,7 @@ export default function WorkflowTimeline({ shipment, onNavigate }: Props) {
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`text-[14px] font-semibold ${isLocked ? "text-slate-400" : "text-slate-900"}`}>
+                  <span className="text-[14px] font-semibold text-slate-900">
                     {step.label}
                   </span>
                   {isCreated && <DocumentStatusBadge status={doc.status} />}
@@ -132,9 +120,7 @@ export default function WorkflowTimeline({ shipment, onNavigate }: Props) {
                 <p className="mt-0.5 text-[12px] text-slate-500">
                   {isCreated
                     ? `Created ${new Date(doc.audit.createdDate).toLocaleDateString()} by ${doc.audit.createdBy}`
-                    : isLocked
-                      ? "Complete the previous document first"
-                      : step.helper}
+                    : step.helper}
                 </p>
               </div>
             </button>

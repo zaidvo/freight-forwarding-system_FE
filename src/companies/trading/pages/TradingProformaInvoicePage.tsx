@@ -54,7 +54,7 @@ export default function TradingProformaInvoicePage() {
     buyerName: inquiry?.buyer ?? "",
     buyerAddress: "",
     buyerContact: inquiry?.email ?? "",
-    sellerName: "FreightOS Trading Division",
+    sellerName: "B2B Global Supplies Trading Division",
     sellerAddress: "",
     sellerContact: "",
     portOfDischarge: inquiry?.destinationCountry ?? "",

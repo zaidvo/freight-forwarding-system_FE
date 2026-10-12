@@ -1,6 +1,6 @@
 // src/companies/trading/components/import/PdfUploadSection.tsx
 
-import { Upload, Eye, Download, RefreshCw, FileText, FileSearch, Loader2 } from "lucide-react";
+import { Upload, Eye, Download, RefreshCw, FileText, FileSearch, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import type { PdfAttachment } from "../../types/importTypes";
 import { useRef, useState } from "react";
 import * as pdfjsLib from 'pdfjs-dist';
@@ -31,10 +31,24 @@ export default function PdfUploadSection({
   const inputRef = useRef<HTMLInputElement>(null);
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) await onUpload(file);
+    if (file) {
+      setUploadState("uploading");
+      setUploadMessage(`Uploading ${file.name}...`);
+      try {
+        await onUpload(file);
+        setUploadState("success");
+        setUploadMessage(`${label} received successfully.`);
+      } catch (error) {
+        console.error("Failed to upload PDF:", error);
+        setUploadState("error");
+        setUploadMessage(error instanceof Error ? error.message : "PDF upload failed. Please try again.");
+      }
+    }
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -139,6 +153,28 @@ export default function PdfUploadSection({
 
       {pdf ? (
         <div className="space-y-3">
+          {uploadMessage && (
+            <div
+              role="status"
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px] ${
+                uploadState === "error"
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : uploadState === "uploading"
+                    ? "border-blue-200 bg-blue-50 text-blue-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              {uploadState === "uploading" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : uploadState === "error" ? (
+                <AlertCircle className="h-3.5 w-3.5" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              )}
+              <span>{uploadMessage}</span>
+            </div>
+          )}
+
           {/* File info */}
           <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
             <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-rose-50">
@@ -237,23 +273,42 @@ export default function PdfUploadSection({
           )}
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="group flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed border-slate-200 bg-white py-6 transition hover:border-blue-300 hover:bg-blue-50/30"
-        >
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 transition group-hover:bg-blue-100">
-            <Upload className="h-5 w-5 text-slate-400 transition group-hover:text-blue-500" />
-          </div>
-          <div className="text-center">
-            <p className="text-[13px] font-medium text-slate-600 group-hover:text-blue-600">
-              Upload PDF
-            </p>
-            <p className="text-[11px] text-slate-400">
-              Click to browse or drag and drop
-            </p>
-          </div>
-        </button>
+        <div className="space-y-3">
+          {uploadMessage && (
+            <div
+              role="status"
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px] ${
+                uploadState === "error"
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : "border-blue-200 bg-blue-50 text-blue-700"
+              }`}
+            >
+              {uploadState === "uploading" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <AlertCircle className="h-3.5 w-3.5" />
+              )}
+              <span>{uploadMessage}</span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="group flex w-full flex-col items-center gap-2 rounded-lg border-2 border-dashed border-slate-200 bg-white py-6 transition hover:border-blue-300 hover:bg-blue-50/30"
+          >
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 transition group-hover:bg-blue-100">
+              <Upload className="h-5 w-5 text-slate-400 transition group-hover:text-blue-500" />
+            </div>
+            <div className="text-center">
+              <p className="text-[13px] font-medium text-slate-600 group-hover:text-blue-600">
+                Upload PDF
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Click to browse or drag and drop
+              </p>
+            </div>
+          </button>
+        </div>
       )}
     </div>
   );

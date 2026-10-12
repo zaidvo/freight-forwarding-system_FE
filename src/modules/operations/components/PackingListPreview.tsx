@@ -35,7 +35,7 @@ export function PackingListPreview({ form }: Props) {
       <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-500">
-            FreightOS
+            B2B Global Supplies
           </div>
           <div className="mt-1 text-[22px] font-bold tracking-[-0.03em] text-slate-900">
             Packing List
@@ -175,7 +175,7 @@ export function PackingListPreview({ form }: Props) {
         )}
 
         <div className="border-t border-slate-100 pt-4 text-center text-[11px] text-slate-400">
-          This packing list is prepared by FreightOS — Document ID:{" "}
+          This packing list is prepared by B2B Global Supplies — Document ID:{" "}
           {form.plNumber}
         </div>
       </div>

@@ -35,7 +35,7 @@ export default function DeleteUserDialog({
               {user.full_name}
             </h2>
             <p className="mt-1 text-[13px] text-slate-500">
-              This will remove the user from FreightOS. Their audit history is
+              This will remove the user from B2B Global Supplies. Their audit history is
               retained.
             </p>
           </div>

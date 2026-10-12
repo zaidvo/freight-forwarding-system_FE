@@ -11,7 +11,7 @@ export function BillOfLadingPreview({ form }: Props) {
         <div className="flex items-start justify-between">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-              FreightOS — Shipping Division
+              B2B Global Supplies — Shipping Division
             </div>
             <div className="mt-1 text-[20px] font-bold tracking-[-0.02em]">
               BILL OF LADING

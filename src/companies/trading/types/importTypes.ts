@@ -5,7 +5,7 @@
 
 // ─── Enums & Shared Types ────────────────────────────────────────
 
-export type DocumentStatus = "draft" | "pending_approval" | "approved" | "cancelled";
+export type DocumentStatus = "draft" | "received" | "pending_approval" | "approved" | "cancelled";
 
 export type ShipmentStatus = "new" | "in_progress" | "completed" | "cancelled";
 

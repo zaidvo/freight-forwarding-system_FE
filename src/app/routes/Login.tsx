@@ -1,11 +1,12 @@
 // src/routes/Login.tsx
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, Ship } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
 import { Label } from "@/shared/components/ui/Label";
 import { useAuth } from "@/app/providers/AuthProvider";
+import BrandLogo from "@/shared/components/BrandLogo";
 
 type LocationState = { from?: { pathname: string } };
 
@@ -42,11 +43,9 @@ export default function LoginPage() {
 
       <section className="relative w-full max-w-[440px]">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="grid h-14 w-14 place-items-center rounded-[18px] bg-slate-950 text-white shadow-[0_18px_40px_rgba(15,23,42,0.22)]">
-            <Ship className="h-7 w-7" strokeWidth={1.8} />
-          </div>
+          <BrandLogo className="h-20 w-36" />
           <h1 className="mt-4 text-3xl font-bold tracking-[-0.045em] text-slate-950">
-            FreightOS
+            B2B Global Supplies
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             Sign in to your operations workspace.

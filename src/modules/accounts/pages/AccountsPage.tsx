@@ -281,7 +281,7 @@ export default function AccountsPage() {
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
-      doc.text("FreightOS Users", margin, 14);
+      doc.text("B2B Global Supplies Users", margin, 14);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.text(`Generated ${generatedAt}`, pageWidth - margin, 14, { align: "right" });
@@ -341,7 +341,7 @@ export default function AccountsPage() {
           <div>
             <h1 className="text-[24px] font-bold tracking-[-0.04em] text-slate-950">Account Management</h1>
             <p className="mt-1 text-[14px] text-slate-500">
-              Manage FreightOS users, groups, and module access across the platform.
+            Manage B2B Global Supplies users, groups, and module access across the platform.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

@@ -292,7 +292,7 @@ function mapDraftBL(record: BackendImportRecord, form?: BackendForm, document?: 
   return {
     id: form ? String(form.id) : `${record.id}-draft-bl`,
     shipmentId: String(record.id),
-    status: form?.completed_at ? "pending_approval" : "draft",
+    status: form?.completed_at ? "pending_approval" : document ? "received" : "draft",
     audit: { createdBy: userDisplayName(), createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
     draftBlNo: data.draftBlNo ?? "",
     bookingNo: data.bookingNo ?? "",
@@ -324,7 +324,7 @@ function mapHouseBL(record: BackendImportRecord, form?: BackendForm, document?: 
   return {
     id: form ? String(form.id) : `${record.id}-house-bl`,
     shipmentId: String(record.id),
-    status: form?.completed_at ? "pending_approval" : "draft",
+    status: form?.completed_at ? "pending_approval" : document ? "received" : "draft",
     audit: { createdBy: userDisplayName(), createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
     hblNumber: data.hblNumber ?? "",
     bookingNumber: data.bookingNumber ?? "",
@@ -360,7 +360,7 @@ function mapMasterBL(record: BackendImportRecord, form?: BackendForm, document?:
   return {
     id: form ? String(form.id) : `${record.id}-master-bl`,
     shipmentId: String(record.id),
-    status: form?.completed_at ? "pending_approval" : "draft",
+    status: form?.completed_at ? "pending_approval" : document ? "received" : "draft",
     audit: { createdBy: userDisplayName(), createdDate: form?.created_at ?? document?.created_at ?? record.created_at, modifiedDate: form?.updated_at },
     shippingLine: data.shippingLine ?? "",
     mblNumber: data.mblNumber ?? "",

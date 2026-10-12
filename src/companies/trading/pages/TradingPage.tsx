@@ -50,7 +50,7 @@ export default function TradingPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <span className="rounded-[8px] bg-sky-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.12em] text-sky-600">
-              Import / Export
+              Trading
             </span>
             <h1 className="mt-1.5 text-[26px] font-bold tracking-[-0.04em] text-slate-900">
               Trading Operations

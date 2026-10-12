@@ -24,6 +24,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
+import BrandLogo from "@/shared/components/BrandLogo";
 import {
   useCompany,
   COMPANIES,
@@ -38,6 +39,11 @@ type NavItem = {
   moduleSlug?: string;
 };
 type NavSection = { title: string; items: NavItem[] };
+
+const COMING_SOON_WORKSPACES = [
+  { name: "Customers", accent: "bg-violet-500" },
+  { name: "Indenting", accent: "bg-amber-500" },
+];
 
 // ─── Nav sections per company ─────────────────────────────────────────────────
 // Structure mirrors the dashboard tiles so users always know where they are.
@@ -255,7 +261,7 @@ export function AppLayout({ children }: LayoutProps) {
     if (location.pathname.startsWith("/freight/quotation/"))
       return "Freight Quotation";
     if (location.pathname.startsWith("/freight/booking/")) return "Booking";
-    return PAGE_LABELS[location.pathname] ?? "FreightOS";
+    return PAGE_LABELS[location.pathname] ?? "B2B Global Supplies";
   }, [location.pathname]);
 
   const avatarInitials = user
@@ -299,14 +305,12 @@ export function AppLayout({ children }: LayoutProps) {
             collapsed ? "w-[68px]" : "w-[224px]"
           }`}
         >
-          {/* Logo */}
+          {/* B2B Global Supplies logo */}
           <div className="flex h-[60px] items-center gap-2.5 border-b border-white/10 px-4">
-            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-[8px] bg-sky-500 text-white shadow-[0_6px_16px_rgba(14,165,233,0.28)]">
-              <LayoutGrid className="h-3.5 w-3.5" />
-            </div>
+            <BrandLogo compact={collapsed} />
             {!collapsed && (
               <span className="select-none text-[16px] font-bold tracking-[-0.02em] text-white">
-                FreightOS
+                B2B Global Supplies
               </span>
             )}
           </div>
@@ -471,6 +475,26 @@ export function AppLayout({ children }: LayoutProps) {
                       {option.id === activeCompany.id && (
                         <Check className="h-3.5 w-3.5 text-blue-500" />
                       )}
+                    </button>
+                  ))}
+                  <div className="my-1 border-t border-slate-100" />
+                  {COMING_SOON_WORKSPACES.map((option) => (
+                    <button
+                      key={option.name}
+                      type="button"
+                      disabled
+                      aria-label={`${option.name} workspace coming soon`}
+                      className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-left text-[13px] opacity-60"
+                    >
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${option.accent}`}
+                      />
+                      <span className="flex-1 font-medium text-slate-500">
+                        {option.name}
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        Coming soon
+                      </span>
                     </button>
                   ))}
                 </div>
