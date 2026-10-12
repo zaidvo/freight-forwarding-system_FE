@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ClipboardList,
   FileText,
+  Handshake,
   LayoutGrid,
   Loader2,
   LogOut,
@@ -42,7 +43,44 @@ type NavSection = { title: string; items: NavItem[] };
 
 const COMING_SOON_WORKSPACES = [
   { name: "Customers", accent: "bg-violet-500" },
-  { name: "Indenting", accent: "bg-amber-500" },
+];
+
+const INDENTING_NAV: NavSection[] = [
+  {
+    title: "Main",
+    items: [
+      { label: "Dashboard", to: "/", icon: LayoutGrid },
+      {
+        label: "Account Management",
+        to: "/accounts",
+        icon: Users,
+        moduleSlug: "account-management",
+      },
+    ],
+  },
+  {
+    title: "Indenting",
+    items: [
+      {
+        label: "Deals",
+        to: "/indenting",
+        icon: Handshake,
+        moduleSlug: "indenting",
+      },
+      {
+        label: "New Deal",
+        to: "/indenting/deals/new",
+        icon: Receipt,
+        moduleSlug: "indenting",
+      },
+      {
+        label: "Parties Directory",
+        to: "/indenting/parties",
+        icon: Users,
+        moduleSlug: "indenting",
+      },
+    ],
+  },
 ];
 
 // ─── Nav sections per company ─────────────────────────────────────────────────
@@ -187,6 +225,9 @@ const PAGE_LABELS: Record<string, string> = {
   "/freight/quotation/new": "Freight Quotation",
   "/freight/booking/new": "Booking",
   "/freight/shipment/new": "New Shipment",
+  "/indenting": "Indenting",
+  "/indenting/deals/new": "New Deal",
+  "/indenting/parties": "Indenting Parties",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -194,7 +235,7 @@ export function AppLayout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasModuleAccess } = useAuth();
-  const { activeCompany, setActiveCompanyId, isFreight } = useCompany();
+  const { activeCompany, setActiveCompanyId, isFreight, isIndenting } = useCompany();
 
   const [collapsed, setCollapsed] = useState(
     () => window.localStorage.getItem("freightos-sidebar-collapsed") === "true",
@@ -239,7 +280,11 @@ export function AppLayout({ children }: LayoutProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [profileOpen]);
 
-  const baseNavSections = isFreight ? FREIGHT_NAV : TRADING_NAV;
+  const baseNavSections = isIndenting
+    ? INDENTING_NAV
+    : isFreight
+    ? FREIGHT_NAV
+    : TRADING_NAV;
   const navSections = useMemo(
     () =>
       baseNavSections
@@ -254,6 +299,13 @@ export function AppLayout({ children }: LayoutProps) {
   );
 
   const currentPage = useMemo(() => {
+    if (
+      location.pathname.startsWith("/indenting/deals/") &&
+      location.pathname.endsWith("/edit")
+    )
+      return "Edit Deal";
+    if (location.pathname.startsWith("/indenting/deals/"))
+      return "Deal Detail";
     if (location.pathname.startsWith("/freight/shipment/"))
       return "Shipment Detail";
     if (location.pathname.startsWith("/trading/inquiry/"))

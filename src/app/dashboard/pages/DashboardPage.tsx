@@ -2,14 +2,22 @@ import { AppLayout } from "@/app/layout/AppLayout";
 import { useCompany } from "@/app/providers/CompanyProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { ModuleTile } from "../components/ModuleTile";
-import { FREIGHT_MODULES, TRADING_MODULES } from "../data/modules";
+import {
+  FREIGHT_MODULES,
+  TRADING_MODULES,
+  INDENTING_MODULES,
+} from "../data/modules";
 
 export default function DashboardPage() {
-  const { isFreight } = useCompany();
+  const { isFreight, isIndenting } = useCompany();
   const { user, hasModuleAccess } = useAuth();
 
   const firstName = user?.full_name?.split(" ")[0] ?? "there";
-  const modules = isFreight ? FREIGHT_MODULES : TRADING_MODULES;
+  const modules = isIndenting
+    ? INDENTING_MODULES
+    : isFreight
+    ? FREIGHT_MODULES
+    : TRADING_MODULES;
   const visibleModules = modules.filter((m) => hasModuleAccess(m.slug));
 
   return (
@@ -17,13 +25,19 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-6xl space-y-7">
         <section className="rounded-[18px] border border-slate-200 bg-white px-6 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-500">
-            {isFreight ? "Freight Forwarding" : "Trading"}
+            {isIndenting
+              ? "Indenting"
+              : isFreight
+              ? "Freight Forwarding"
+              : "Trading"}
           </p>
           <h1 className="mt-2 text-[24px] font-bold tracking-[-0.04em] text-slate-950">
             Welcome back, {firstName}
           </h1>
           <p className="mt-2 max-w-2xl text-[14px] leading-6 text-slate-500">
-            {isFreight
+            {isIndenting
+              ? "Continue with indenting deals, parties, and commission tracking from one workspace."
+              : isFreight
               ? "Continue with freight operations, shipment documents, and finance from one workspace."
               : "Continue with trading operations, import shipments, and sales documents from one workspace."}
           </p>

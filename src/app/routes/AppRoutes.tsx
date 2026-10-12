@@ -50,6 +50,12 @@ import ImportClearingInvoiceForm from "@/companies/trading/components/import/Imp
 import PaymentReceiptForm from "@/companies/trading/components/import/PaymentReceiptForm";
 import DetentionInvoiceForm from "@/companies/trading/components/import/DetentionInvoiceForm";
 
+// Indenting workflow
+import IndentingPage from "@/modules/indenting/pages/IndentingPage";
+import IndentDealFormPage from "@/modules/indenting/pages/IndentDealFormPage";
+import IndentDealDetailPage from "@/modules/indenting/pages/IndentDealDetailPage";
+import IndentingPartiesPage from "@/modules/indenting/pages/IndentingPartiesPage";
+
 export default function AppRoutes() {
   return (
     <BrowserRouter>
@@ -149,6 +155,27 @@ export default function AppRoutes() {
                 <Route path="/trading/imports/:id/invoice" element={<ImportClearingInvoiceForm />} />
                 <Route path="/trading/imports/:id/payment-receipt" element={<PaymentReceiptForm />} />
                 <Route path="/trading/imports/:id/detention-invoice" element={<DetentionInvoiceForm />} />
+              </Route>
+
+              {/* Indenting Workflow */}
+              <Route element={<ModuleAccessRoute moduleSlug="indenting" />}>
+                <Route path="/indenting" element={<IndentingPage />} />
+                <Route
+                  path="/indenting/deals/new"
+                  element={<IndentDealFormPage />}
+                />
+                <Route
+                  path="/indenting/deals/:id"
+                  element={<IndentDealDetailPage />}
+                />
+                <Route
+                  path="/indenting/deals/:id/edit"
+                  element={<IndentDealFormPage />}
+                />
+                <Route
+                  path="/indenting/parties"
+                  element={<IndentingPartiesPage />}
+                />
               </Route>
             </Route>
 
