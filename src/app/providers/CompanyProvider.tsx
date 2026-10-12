@@ -1,21 +1,16 @@
-// src/providers/CompanyProvider.tsx
 /* eslint-disable react-refresh/only-export-components */
-//
-// Lifts active company state into React context so any component
-// (sidebar, dashboard, pages) can read and react to company switches.
-//
-// BE integration: When backend supports per-user company assignments,
-// fetch available companies from GET /api/v1/companies and store here.
-
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-// ─── Types ───────────────────────────────────────────────────────
-export type CompanyId = "freight-forwarding" | "import-export" | "indenting";
+export type CompanyId =
+  | "freight-forwarding"
+  | "import-export"
+  | "indenting"
+  | "customers";
 
 export type Company = {
   id: CompanyId;
   name: string;
-  accent: string; // tailwind bg class
+  accent: string;
 };
 
 export const COMPANIES: Company[] = [
@@ -26,6 +21,7 @@ export const COMPANIES: Company[] = [
   },
   { id: "import-export", name: "Trading", accent: "bg-sky-500" },
   { id: "indenting", name: "Indenting", accent: "bg-amber-500" },
+  { id: "customers", name: "Customers", accent: "bg-violet-500" },
 ];
 
 type CompanyContextValue = {
@@ -34,21 +30,20 @@ type CompanyContextValue = {
   isFreight: boolean;
   isTrading: boolean;
   isIndenting: boolean;
+  isCustomers: boolean;
 };
 
-// ─── Context ─────────────────────────────────────────────────────
 const CompanyContext = createContext<CompanyContextValue | null>(null);
 
-// ─── Provider ────────────────────────────────────────────────────
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const [activeCompanyId, setActiveCompanyId] = useState<CompanyId>(
     () =>
       (localStorage.getItem("freightos-active-company") as CompanyId) ??
-      "freight-forwarding"
+      "freight-forwarding",
   );
 
   const activeCompany =
-    COMPANIES.find((c) => c.id === activeCompanyId) ?? COMPANIES[0];
+    COMPANIES.find((company) => company.id === activeCompanyId) ?? COMPANIES[0];
 
   const handleSetCompany = (id: CompanyId) => {
     localStorage.setItem("freightos-active-company", id);
@@ -63,6 +58,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         isFreight: activeCompanyId === "freight-forwarding",
         isTrading: activeCompanyId === "import-export",
         isIndenting: activeCompanyId === "indenting",
+        isCustomers: activeCompanyId === "customers",
       }}
     >
       {children}
@@ -70,7 +66,6 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ─── Hook ────────────────────────────────────────────────────────
 export function useCompany(): CompanyContextValue {
   const ctx = useContext(CompanyContext);
   if (!ctx) throw new Error("useCompany must be used inside <CompanyProvider>");

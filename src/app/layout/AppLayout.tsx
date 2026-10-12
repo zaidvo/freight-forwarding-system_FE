@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
+  Building2,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -41,9 +42,7 @@ type NavItem = {
 };
 type NavSection = { title: string; items: NavItem[] };
 
-const COMING_SOON_WORKSPACES = [
-  { name: "Customers", accent: "bg-violet-500" },
-];
+const COMING_SOON_WORKSPACES = [];
 
 const INDENTING_NAV: NavSection[] = [
   {
@@ -81,10 +80,11 @@ const INDENTING_NAV: NavSection[] = [
       },
     ],
   },
-];
 
 // ─── Nav sections per company ─────────────────────────────────────────────────
 // Structure mirrors the dashboard tiles so users always know where they are.
+
+];
 
 const FREIGHT_NAV: NavSection[] = [
   {
@@ -202,9 +202,24 @@ const TRADING_NAV: NavSection[] = [
   },
 ];
 
+const CUSTOMERS_NAV: NavSection[] = [
+  {
+    title: "Directory",
+    items: [
+      {
+        label: "Customers",
+        to: "/customers",
+        icon: Building2,
+        moduleSlug: "customers",
+      },
+    ],
+  },
+];
+
 // ─── Page label map ───────────────────────────────────────────────────────────
 const PAGE_LABELS: Record<string, string> = {
   "/": "Dashboard",
+  "/customers": "Customers",
   "/accounts": "Account Management",
   "/operations": "Operations",
   "/operations/packing-list": "Packing List",
@@ -235,7 +250,7 @@ export function AppLayout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasModuleAccess } = useAuth();
-  const { activeCompany, setActiveCompanyId, isFreight, isIndenting } = useCompany();
+  const { activeCompany, setActiveCompanyId, isFreight, isIndenting, isCustomers } = useCompany();
 
   const [collapsed, setCollapsed] = useState(
     () => window.localStorage.getItem("freightos-sidebar-collapsed") === "true",
@@ -280,7 +295,9 @@ export function AppLayout({ children }: LayoutProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [profileOpen]);
 
-  const baseNavSections = isIndenting
+  const baseNavSections = isCustomers
+    ? CUSTOMERS_NAV
+    : isIndenting
     ? INDENTING_NAV
     : isFreight
     ? FREIGHT_NAV
@@ -315,6 +332,21 @@ export function AppLayout({ children }: LayoutProps) {
     if (location.pathname.startsWith("/freight/booking/")) return "Booking";
     return PAGE_LABELS[location.pathname] ?? "B2B Global Supplies";
   }, [location.pathname]);
+
+  const switchWorkspace = (id: CompanyId) => {
+    setActiveCompanyId(id);
+    setCompanyOpen(false);
+    if (id === "customers") {
+      navigate("/customers");
+    } else if (id === "indenting") {
+      navigate("/indenting");
+    } else if (
+      location.pathname.startsWith("/customers") ||
+      location.pathname.startsWith("/indenting")
+    ) {
+      navigate("/");
+    }
+  };
 
   const avatarInitials = user
     ? user.full_name
@@ -508,14 +540,16 @@ export function AppLayout({ children }: LayoutProps) {
                   <p className="mb-1 px-2.5 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                     Switch workspace
                   </p>
-                  {COMPANIES.map((option) => (
+                  {COMPANIES.filter(
+                    (option) =>
+                      option.id !== "customers" ||
+                      user?.role === "root" ||
+                      hasModuleAccess("customers"),
+                  ).map((option) => (
                     <button
                       key={option.id}
                       type="button"
-                      onClick={() => {
-                        setActiveCompanyId(option.id as CompanyId);
-                        setCompanyOpen(false);
-                      }}
+                      onClick={() => switchWorkspace(option.id as CompanyId)}
                       className={[
                         "flex w-full items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-slate-50",
                         option.id === activeCompany.id ? "bg-blue-50/70" : "",

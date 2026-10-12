@@ -15,6 +15,8 @@ import DashboardPage from "@/app/dashboard/pages/DashboardPage";
 
 // Accounts
 import AccountsPage from "@/modules/accounts/pages/AccountsPage";
+import CustomersPage from "@/modules/customers/pages/CustomersPage";
+import CustomerDetailPage from "@/modules/customers/pages/CustomerDetailPage";
 
 // Operations
 import OperationsPage from "@/modules/operations/pages/OperationsPage";
@@ -75,6 +77,11 @@ export default function AppRoutes() {
                 element={<ModuleAccessRoute moduleSlug="account-management" />}
               >
                 <Route path="/accounts" element={<AccountsPage />} />
+              </Route>
+
+              <Route element={<ModuleAccessRoute moduleSlug="customers" />}>
+                <Route path="/customers" element={<CustomersPage />} />
+                <Route path="/customers/:id" element={<CustomerDetailPage />} />
               </Route>
 
               <Route element={<ModuleAccessRoute moduleSlug="operations" />}>

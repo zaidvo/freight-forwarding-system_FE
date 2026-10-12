@@ -1,10 +1,5 @@
-// src/app/dashboard/data/modules.ts
-//
-// Active module tiles per company context.
-// Operations and Sales tiles are company-specific so their routes
-// lead to the relevant sub-flows without any confusion.
-
 import {
+  Building2,
   Users,
   Ship,
   ShoppingCart,
@@ -23,7 +18,6 @@ export type ModuleDef = {
   ready?: boolean;
 };
 
-// ─── Shared tiles ─────────────────────────────────────────────────
 const ACCOUNT_MANAGEMENT: ModuleDef = {
   name: "Account Management",
   slug: "account-management",
@@ -33,7 +27,6 @@ const ACCOUNT_MANAGEMENT: ModuleDef = {
   ready: true,
 };
 
-// ─── Freight Forwarding tiles ─────────────────────────────────────
 export const FREIGHT_MODULES: ModuleDef[] = [
   ACCOUNT_MANAGEMENT,
   {
@@ -54,7 +47,6 @@ export const FREIGHT_MODULES: ModuleDef[] = [
   },
 ];
 
-// ─── Import / Export (Trading) tiles ─────────────────────────────
 export const TRADING_MODULES: ModuleDef[] = [
   ACCOUNT_MANAGEMENT,
   {
@@ -75,7 +67,6 @@ export const TRADING_MODULES: ModuleDef[] = [
   },
 ];
 
-// ─── Indenting tiles ──────────────────────────────────────────────
 export const INDENTING_MODULES: ModuleDef[] = [
   ACCOUNT_MANAGEMENT,
   {
@@ -96,3 +87,13 @@ export const INDENTING_MODULES: ModuleDef[] = [
   },
 ];
 
+export const CUSTOMER_MODULES: ModuleDef[] = [
+  {
+    name: "Customers",
+    slug: "customers",
+    icon: Building2,
+    color: "#7c3aed",
+    to: "/customers",
+    ready: true,
+  },
+];

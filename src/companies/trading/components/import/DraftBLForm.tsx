@@ -9,6 +9,9 @@ import ContainerTable from "./ContainerTable";
 import PdfUploadSection from "./PdfUploadSection";
 import DocumentStatusBadge from "./DocumentStatusBadge";
 import SaveFeedback from "@/shared/components/SaveFeedback";
+import CustomerForm from "@/modules/customers/components/CustomerForm";
+import CustomerPicker from "@/modules/customers/components/CustomerPicker";
+import type { CustomerSuggestion } from "@/modules/customers/types";
 import type { ContainerRow, PdfAttachment, DraftBL } from "../../types/importTypes";
 import { downloadImportPdf } from "../../services/tradingImportService";
 
@@ -193,9 +196,28 @@ export default function DraftBLForm() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const [customerFormOpen, setCustomerFormOpen] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
 
   const set = (field: string, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  const applyConsignee = (customer: CustomerSuggestion) => {
+    setForm((current) => ({
+      ...current,
+      consigneeName: customer.name,
+      consigneeAddress: customer.address ?? current.consigneeAddress,
+      consigneePhone: customer.phone ?? current.consigneePhone,
+      consigneeEmail: customer.email ?? current.consigneeEmail,
+    }));
+    setErrors((current) => ({
+      ...current,
+      consigneeName: "",
+      consigneeAddress: "",
+      consigneePhone: "",
+      consigneeEmail: "",
+    }));
+  };
 
   useEffect(() => {
     if (!shipment) void loadShipments();
@@ -647,15 +669,21 @@ export default function DraftBLForm() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="md:col-span-2">
                     <label className={labelClasses}>Company Name</label>
-                    <input
-                      className={`${inputClasses} ${errors.consigneeName ? "border-red-500 focus:ring-red-100" : ""}`}
+                    <CustomerPicker
                       value={form.consigneeName}
-                      onChange={(e) => {
-                        set("consigneeName", e.target.value);
+                      onChange={(value) => {
+                        set("consigneeName", value);
                         if (errors.consigneeName) setErrors(prev => ({ ...prev, consigneeName: "" }));
                       }}
+                      onSelect={applyConsignee}
+                      onCreateNew={(name) => {
+                        setNewCustomerName(name);
+                        setCustomerFormOpen(true);
+                      }}
                       placeholder="e.g. XYZ Fashion Trading LLC"
+                      error={Boolean(errors.consigneeName)}
                     />
+                    <p className="mt-1 text-[11px] text-slate-400">Type to find a saved consignee or create a new customer.</p>
                     {errors.consigneeName && <p className="text-red-500 text-[11px] mt-1">{errors.consigneeName}</p>}
                   </div>
                   <div className="md:col-span-2">
@@ -939,6 +967,16 @@ export default function DraftBLForm() {
             </div>
           </div>
         </div>
+        <CustomerForm
+          open={customerFormOpen}
+          onClose={() => setCustomerFormOpen(false)}
+          initialName={newCustomerName}
+          initialRole="consignee"
+          onSaved={(customer) => {
+            applyConsignee(customer);
+            setCustomerFormOpen(false);
+          }}
+        />
       </div>
     </AppLayout>
   );
