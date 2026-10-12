@@ -6,8 +6,6 @@ const STEPS: { status: TradingStatus; label: string }[] = [
   { status: "quoted", label: "Quotation" },
   { status: "pi_issued", label: "Proforma Invoice" },
   { status: "po_received", label: "Purchase Order" },
-  { status: "deal_confirmed", label: "Deal Confirmed" },
-  { status: "shipment_created", label: "Shipment / Complete" },
 ];
 
 const STATUS_ORDER: TradingStatus[] = [

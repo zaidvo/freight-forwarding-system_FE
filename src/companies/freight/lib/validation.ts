@@ -86,13 +86,6 @@ export function canCloseShipment(shipment: FreightShipment): {
 }
 
 /**
- * V6 — Statuses at which the shipment becomes fully read-only.
- */
-export function isShipmentLocked(shipment: FreightShipment): boolean {
-  return shipment.status === "completed";
-}
-
-/**
  * V7 — Field-level validation for the shipment creation form.
  * Returns a map of fieldName → error message (only for invalid fields).
  */

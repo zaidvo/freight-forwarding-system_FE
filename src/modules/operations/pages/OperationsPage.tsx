@@ -1,16 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useCompany } from "@/app/providers/CompanyProvider";
-import { ClipboardList, FileText, HandshakeIcon, Ship, ShoppingCart, TrendingUp } from "lucide-react";
+import { ClipboardList, FileText, Ship, ShoppingCart, TrendingUp } from "lucide-react";
 
 type OpModule = {
   label: string;
   description: string;
   icon: React.ElementType;
-  route: string | null;
+  route: string;
   accent: string;
   iconColor: string;
-  soon?: boolean;
 };
 
 const FREIGHT_OPS: OpModule[] = [
@@ -57,14 +56,6 @@ const TRADING_OPS: OpModule[] = [
     accent: "bg-amber-50",
     iconColor: "text-amber-500",
   },
-  {
-    label: "Deal Confirmation",
-    description: "Review purchase orders and confirm real trading deals.",
-    icon: HandshakeIcon,
-    route: "/trading/deal/new",
-    accent: "bg-emerald-50",
-    iconColor: "text-emerald-500",
-  },
 ];
 
 export default function OperationsPage() {
@@ -97,28 +88,18 @@ export default function OperationsPage() {
               <button
                 key={mod.label}
                 type="button"
-                onClick={() => mod.route && navigate(mod.route)}
-                disabled={!mod.route}
+                onClick={() => navigate(mod.route)}
                 className={[
                   "group flex flex-col items-start gap-4 rounded-[18px] border border-slate-200 bg-white p-6 text-left",
                   "shadow-[0_8px_24px_rgba(22,31,54,0.05)] transition",
-                  mod.route
-                    ? `cursor-pointer ${hoverBorder} hover:shadow-[0_12px_32px_rgba(22,31,54,0.09)]`
-                    : "cursor-default opacity-60",
+                  `cursor-pointer ${hoverBorder} hover:shadow-[0_12px_32px_rgba(22,31,54,0.09)]`,
                 ].join(" ")}
               >
                 <div className={`grid h-11 w-11 place-items-center rounded-[12px] ${mod.accent}`}>
                   <Icon className={`h-5 w-5 ${mod.iconColor}`} />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[15px] font-semibold text-slate-900">{mod.label}</span>
-                    {mod.soon && (
-                      <span className="rounded-[5px] bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                        Soon
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-[15px] font-semibold text-slate-900">{mod.label}</span>
                   <p className="mt-1 text-[13px] leading-relaxed text-slate-500">{mod.description}</p>
                 </div>
               </button>

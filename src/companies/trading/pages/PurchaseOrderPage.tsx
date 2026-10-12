@@ -72,7 +72,7 @@ export default function PurchaseOrderPage() {
         attachmentUrl: fileName ?? undefined, // BE: replace with actual upload URL
         customerNotes: notes,
       });
-      navigate(`/trading/deal/new?inquiryId=${inquiryId}`);
+      navigate("/trading");
     } finally {
       setSaving(false);
     }

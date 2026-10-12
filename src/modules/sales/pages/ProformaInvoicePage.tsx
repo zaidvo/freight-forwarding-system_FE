@@ -32,9 +32,6 @@ export default function ProformaInvoicePage() {
               <Download className="h-4 w-4" />
               Export PDF
             </Button>
-            <Button onClick={() => alert("Saved (backend ready)")}>
-              Save Draft
-            </Button>
           </div>
         </div>
 

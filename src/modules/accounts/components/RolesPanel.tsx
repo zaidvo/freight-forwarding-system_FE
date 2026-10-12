@@ -224,7 +224,7 @@ function ModulePicker({
                 {module.name}
               </div>
               <div className="mt-1 text-[12px] leading-5 text-slate-400">
-                {module.isActive ? "Active module" : "Coming soon"}
+                {module.isActive ? "Active module" : "Inactive"}
               </div>
             </div>
           </label>

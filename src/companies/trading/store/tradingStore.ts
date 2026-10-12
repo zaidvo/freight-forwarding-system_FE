@@ -15,7 +15,6 @@ import type {
   TradingInquiry,
   Quotation,
   PurchaseOrder,
-  Deal,
   AuditEntry,
   TradingStatus,
 } from "../types";
@@ -23,11 +22,9 @@ import {
   SEED_INQUIRIES,
   SEED_QUOTATIONS,
   SEED_PURCHASE_ORDERS,
-  SEED_DEALS,
   generateInquiryId,
   generateQuotationId,
   generatePOId,
-  generateDealId,
   generatePIId,
 } from "../data/seed";
 
@@ -35,7 +32,6 @@ type TradingStore = {
   inquiries: TradingInquiry[];
   quotations: Quotation[];
   purchaseOrders: PurchaseOrder[];
-  deals: Deal[];
 
   // Step 1
   createInquiry: (
@@ -56,16 +52,8 @@ type TradingStore = {
     data: Omit<PurchaseOrder, "id" | "status" | "auditTrail" | "createdAt">
   ) => PurchaseOrder;
 
-  // Step 5
-  confirmDeal: (poId: string, inquiryId: string) => Deal;
-  rejectDeal: (poId: string, reason: string) => void;
-
-  // Step 6
-  handleFreightDecision: (dealId: string, freightByUs: boolean) => void;
-
   // Audit
   appendAudit: (
-    recordType: "inquiry" | "deal",
     id: string,
     entry: Omit<AuditEntry, "timestamp">
   ) => void;
@@ -78,11 +66,10 @@ const audit = (action: string, user = "Current User"): AuditEntry => ({
   action,
 });
 
-export const useTradingStore = create<TradingStore>((set, get) => ({
+export const useTradingStore = create<TradingStore>((set) => ({
   inquiries: SEED_INQUIRIES,
   quotations: SEED_QUOTATIONS,
   purchaseOrders: SEED_PURCHASE_ORDERS,
-  deals: SEED_DEALS,
 
   // ── Step 1 ──────────────────────────────────────────────────────
   createInquiry: (data) => {
@@ -181,97 +168,13 @@ export const useTradingStore = create<TradingStore>((set, get) => ({
     return po;
   },
 
-  // ── Step 5 ──────────────────────────────────────────────────────
-  confirmDeal: (poId, inquiryId) => {
-    const { inquiries, purchaseOrders } = get();
-    const inq = inquiries.find((i) => i.id === inquiryId)!;
-    const po = purchaseOrders.find((p) => p.id === poId);
-    const quotation = get().quotations.find((q) => q.inquiryId === inquiryId);
-
-    const deal: Deal = {
-      id: generateDealId(),
-      inquiryId,
-      poId: po?.id ?? poId,
-      customer: inq.buyer,
-      product: inq.product,
-      quantity: inq.quantity,
-      totalValue: (quotation?.unitPrice ?? 0) * inq.quantity,
-      currency: quotation?.currency ?? "USD",
-      status: "deal_confirmed",
-      auditTrail: [audit("Deal confirmed")],
-      createdAt: now(),
-    };
-    // BE: POST /api/v1/trading/deals
-    set((s) => ({
-      deals: [deal, ...s.deals],
-      inquiries: s.inquiries.map((i) =>
-        i.id === inquiryId
-          ? {
-              ...i,
-              status: "deal_confirmed" as TradingStatus,
-              auditTrail: [...i.auditTrail, audit("Deal confirmed")],
-            }
-          : i
-      ),
-    }));
-    return deal;
-  },
-
-  rejectDeal: (poId, reason) => {
-    // BE: PATCH /api/v1/trading/deals/:id/reject
-    const po = get().purchaseOrders.find((p) => p.id === poId);
-    if (!po) return;
-    set((s) => ({
-      inquiries: s.inquiries.map((i) =>
-        i.id === po.inquiryId
-          ? {
-              ...i,
-              auditTrail: [...i.auditTrail, audit(`Deal rejected: ${reason}`)],
-            }
-          : i
-      ),
-    }));
-  },
-
-  // ── Step 6 ──────────────────────────────────────────────────────
-  handleFreightDecision: (dealId, freightByUs) => {
-    const status: TradingStatus = freightByUs
-      ? "shipment_created"
-      : "trading_completed";
-    const action = freightByUs
-      ? "Freight shipment created"
-      : "Trading completed (external freight)";
-    // BE: PATCH /api/v1/trading/deals/:id/freight-decision
-    // If freightByUs: BE creates freight shipment draft and returns shipment ID
-    set((s) => ({
-      deals: s.deals.map((d) =>
-        d.id === dealId
-          ? {
-              ...d,
-              status,
-              freightHandledByUs: freightByUs,
-              auditTrail: [...d.auditTrail, audit(action)],
-            }
-          : d
-      ),
-    }));
-  },
-
   // ── Audit helper ────────────────────────────────────────────────
-  appendAudit: (recordType, id, entry) => {
+  appendAudit: (id, entry) => {
     const full: AuditEntry = { ...entry, timestamp: now() };
-    if (recordType === "inquiry") {
-      set((s) => ({
-        inquiries: s.inquiries.map((i) =>
-          i.id === id ? { ...i, auditTrail: [...i.auditTrail, full] } : i
-        ),
-      }));
-    } else {
-      set((s) => ({
-        deals: s.deals.map((d) =>
-          d.id === id ? { ...d, auditTrail: [...d.auditTrail, full] } : d
-        ),
-      }));
-    }
+    set((s) => ({
+      inquiries: s.inquiries.map((i) =>
+        i.id === id ? { ...i, auditTrail: [...i.auditTrail, full] } : i
+      ),
+    }));
   },
 }));

@@ -1,4 +1,3 @@
-// src/modules/trading/pages/TradingPage.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
@@ -9,31 +8,27 @@ import {
   Search,
   FileText,
   ClipboardCheck,
-  Handshake,
   TrendingUp,
   Filter,
+  CheckCircle,
 } from "lucide-react";
 import { STATUS_LABELS } from "../data/seed";
 import { useTradingStore } from "../store/tradingStore";
-import { useFreightStore } from "@/companies/freight/store/freightStore";
 import { StatusBadge } from "../components/StatusBadge";
-import { ShipmentDecisionDialog } from "../components/ShipmentDecisionDialog";
-import type { Deal } from "../types";
 
 export default function TradingPage() {
   const navigate = useNavigate();
-  const { inquiries, deals, handleFreightDecision } = useTradingStore();
+  const { inquiries } = useTradingStore();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [decisionDeal, setDecisionDeal] = useState<Deal | null>(null);
 
   // ── Stats ────────────────────────────────────────────────────────
   const stats = {
     total: inquiries.length,
     received: inquiries.filter((i) => i.status === "inquiry_received").length,
     quoted: inquiries.filter((i) => i.status === "quoted").length,
-    confirmed: deals.filter((d) => d.status === "deal_confirmed").length,
+    poReceived: inquiries.filter((i) => i.status === "po_received").length,
   };
 
   // ── Filtered inquiries ───────────────────────────────────────────
@@ -48,29 +43,6 @@ export default function TradingPage() {
     return matchSearch && matchStatus;
   });
 
-  // ── Freight decision handler ─────────────────────────────────────
-  const onFreightDecide = (freightByUs: boolean) => {
-    if (!decisionDeal) return;
-    handleFreightDecision(decisionDeal.id, freightByUs);
-    setDecisionDeal(null);
-    if (freightByUs) {
-      const destination =
-        inquiries.find((i) => i.id === decisionDeal.inquiryId)
-          ?.destinationCountry ?? "";
-      const { createInquiryFromDeal } = useFreightStore.getState();
-      const freightInquiry = createInquiryFromDeal({
-        customer: decisionDeal.customer,
-        product: decisionDeal.product,
-        quantity: decisionDeal.quantity,
-        origin: "Pakistan",
-        destination,
-        tradingDealId: decisionDeal.id,
-      });
-      // Navigate straight to shipment form — Path 1 skips quotation/booking
-      navigate(`/freight/shipment/new?inquiryId=${freightInquiry.id}`);
-    }
-  };
-
   return (
     <AppLayout>
       <div className="mx-auto max-w-7xl space-y-5">
@@ -84,8 +56,7 @@ export default function TradingPage() {
               Trading Operations
             </h1>
             <p className="mt-1 text-[14px] text-slate-500">
-              Manage the full trading pipeline from inquiry to deal
-              confirmation.
+              Manage the full trading pipeline from inquiry to purchase order.
             </p>
           </div>
           <Button onClick={() => navigate("/trading/inquiry/new")}>
@@ -116,9 +87,9 @@ export default function TradingPage() {
               color: "bg-purple-50 text-purple-500",
             },
             {
-              label: "Deals Confirmed",
-              value: stats.confirmed,
-              icon: Handshake,
+              label: "PO Received",
+              value: stats.poReceived,
+              icon: CheckCircle,
               color: "bg-emerald-50 text-emerald-500",
             },
           ].map(({ label, value, icon: Icon, color }) => (
@@ -193,11 +164,6 @@ export default function TradingPage() {
             <tbody>
               {filtered.length ? (
                 filtered.map((inq) => {
-                  const deal = deals.find((d) => d.inquiryId === inq.id);
-                  const showDecision =
-                    deal?.status === "deal_confirmed" &&
-                    !deal.freightHandledByUs;
-
                   return (
                     <tr
                       key={inq.id}
@@ -268,27 +234,6 @@ export default function TradingPage() {
                               Record PO
                             </Button>
                           )}
-                          {inq.status === "po_received" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                navigate(
-                                  `/trading/deal/new?inquiryId=${inq.id}`,
-                                )
-                              }
-                            >
-                              Confirm Deal
-                            </Button>
-                          )}
-                          {showDecision && deal && (
-                            <Button
-                              size="sm"
-                              onClick={() => setDecisionDeal(deal)}
-                            >
-                              Freight Decision
-                            </Button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -308,14 +253,6 @@ export default function TradingPage() {
           </table>
         </div>
       </div>
-
-      {/* Step 6 Decision Dialog */}
-      <ShipmentDecisionDialog
-        open={!!decisionDeal}
-        deal={decisionDeal}
-        onClose={() => setDecisionDeal(null)}
-        onDecide={onFreightDecide}
-      />
     </AppLayout>
   );
 }

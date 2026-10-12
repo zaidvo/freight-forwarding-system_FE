@@ -31,7 +31,6 @@ import TradingInquiryPage from "@/companies/trading/pages/TradingInquiryPage";
 import QuotationPage from "@/companies/trading/pages/QuotationPage";
 import TradingProformaInvoicePage from "@/companies/trading/pages/TradingProformaInvoicePage";
 import PurchaseOrderPage from "@/companies/trading/pages/PurchaseOrderPage";
-import DealConfirmationPage from "@/companies/trading/pages/DealConfirmationPage";
 
 // Freight workflow
 import FreightPage from "@/companies/freight/pages/FreightPage";
@@ -93,14 +92,6 @@ export default function AppRoutes() {
                 <Route
                   path="/trading/inquiry/:id"
                   element={<TradingInquiryPage />}
-                />
-                <Route
-                  path="/trading/deal/new"
-                  element={<DealConfirmationPage />}
-                />
-                <Route
-                  path="/trading/deal/:id"
-                  element={<DealConfirmationPage />}
                 />
                 <Route
                   path="/freight/inquiry/new"

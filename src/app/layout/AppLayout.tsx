@@ -8,14 +8,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  BarChart3,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   FileText,
-  HandshakeIcon,
   LayoutGrid,
   Loader2,
   LogOut,
@@ -24,7 +22,6 @@ import {
   ShoppingCart,
   TrendingUp,
   Users,
-  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import {
@@ -39,7 +36,6 @@ type NavItem = {
   to?: string;
   icon: typeof LayoutGrid;
   moduleSlug?: string;
-  soon?: boolean;
 };
 type NavSection = { title: string; items: NavItem[] };
 
@@ -97,29 +93,6 @@ const FREIGHT_NAV: NavSection[] = [
         icon: Receipt,
         moduleSlug: "sales",
       },
-      {
-        label: "Sales Overview",
-        icon: TrendingUp,
-        moduleSlug: "sales",
-        soon: true,
-      },
-    ],
-  },
-  {
-    title: "Finance",
-    items: [
-      { label: "Finance", icon: Wallet, moduleSlug: "finance", soon: true },
-    ],
-  },
-  {
-    title: "Marketing",
-    items: [
-      {
-        label: "Marketing",
-        icon: BarChart3,
-        moduleSlug: "marketing",
-        soon: true,
-      },
     ],
   },
 ];
@@ -152,15 +125,8 @@ const TRADING_NAV: NavSection[] = [
         icon: ShoppingCart,
         moduleSlug: "operations",
       },
-      {
-        label: "Deal Confirmation",
-        to: "/trading/deal/new",
-        icon: HandshakeIcon,
-        moduleSlug: "operations",
-      },
     ],
   },
-
   {
     title: "Sales",
     items: [
@@ -188,29 +154,6 @@ const TRADING_NAV: NavSection[] = [
         icon: ShoppingCart,
         moduleSlug: "sales",
       },
-      {
-        label: "Sales Overview",
-        icon: TrendingUp,
-        moduleSlug: "sales",
-        soon: true,
-      },
-    ],
-  },
-  {
-    title: "Finance",
-    items: [
-      { label: "Finance", icon: Wallet, moduleSlug: "finance", soon: true },
-    ],
-  },
-  {
-    title: "Marketing",
-    items: [
-      {
-        label: "Marketing",
-        icon: BarChart3,
-        moduleSlug: "marketing",
-        soon: true,
-      },
     ],
   },
 ];
@@ -229,7 +172,6 @@ const PAGE_LABELS: Record<string, string> = {
   "/trading/quotation/new": "New Quotation",
   "/trading/pi/new": "Proforma Invoice",
   "/trading/po/new": "Purchase Order",
-  "/trading/deal/new": "Deal Confirmation",
   "/trading/imports": "Import Shipments",
   "/trading/imports/:id/invoice": "Freight Invoice",
   "/trading/imports/:id/payment-receipt": "Payment Receipt",
@@ -399,40 +341,27 @@ export function AppLayout({ children }: LayoutProps) {
                           "flex items-center gap-3 rounded-[8px] px-2.5 py-2 text-[13px] font-medium transition-colors",
                           active
                             ? "bg-white/10 text-white shadow-[inset_3px_0_0_rgba(56,189,248,0.95)]"
-                            : item.soon
-                              ? "cursor-default text-slate-600"
-                              : "text-slate-300 hover:bg-white/10 hover:text-white",
+                            : "text-slate-300 hover:bg-white/10 hover:text-white",
                           collapsed ? "justify-center" : "",
                         ].join(" ")}
                       >
                         <Icon
                           className={[
                             "h-[17px] w-[17px] shrink-0",
-                            active
-                              ? "text-sky-300"
-                              : item.soon
-                                ? "text-slate-600"
-                                : "text-slate-400",
+                            active ? "text-sky-300" : "text-slate-400",
                           ].join(" ")}
                         />
                         {!collapsed && (
-                          <>
-                            <span className="min-w-0 truncate">
-                              {item.label}
-                            </span>
-                            {item.soon && (
-                              <span className="ml-auto shrink-0 rounded-[4px] bg-slate-100 px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-widest text-slate-400">
-                                Soon
-                              </span>
-                            )}
-                          </>
+                          <span className="min-w-0 truncate">
+                            {item.label}
+                          </span>
                         )}
                       </span>
                     );
 
                     return (
                       <li key={item.label}>
-                        {item.to && !item.soon ? (
+                        {item.to ? (
                           <Link to={item.to} className="block">
                             {inner}
                           </Link>

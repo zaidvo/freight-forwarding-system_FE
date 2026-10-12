@@ -6,21 +6,17 @@
 //   GET  /api/v1/trading/inquiries        → replace SEED_INQUIRIES
 //   GET  /api/v1/trading/quotations       → replace SEED_QUOTATIONS
 //   GET  /api/v1/trading/purchase-orders  → replace SEED_PURCHASE_ORDERS
-//   GET  /api/v1/trading/deals            → replace SEED_DEALS
 //   POST /api/v1/trading/inquiries        → replace createInquiry()
 //   PATCH /api/v1/trading/inquiries/:id/submit → replace submitInquiry()
 //   etc. — every mutation maps to a REST endpoint
 
-import type { TradingInquiry, Quotation, PurchaseOrder, Deal } from "../types";
-
+import type { TradingInquiry, Quotation, PurchaseOrder } from "../types";
 
 export const SEED_INQUIRIES: TradingInquiry[] = [];
 
 export const SEED_QUOTATIONS: Quotation[] = [];
 
 export const SEED_PURCHASE_ORDERS: PurchaseOrder[] = [];
-
-export const SEED_DEALS: Deal[] = [];
 
 // ─── Status label map ─────────────────────────────────────────────
 export const STATUS_LABELS: Record<string, string> = {
@@ -56,7 +52,5 @@ export const generatePIId = () =>
   `PI-${year}-${String(Math.floor(Math.random() * 900) + 100)}`;
 export const generatePOId = () =>
   `PO-${year}-${String(Math.floor(Math.random() * 900) + 100)}`;
-export const generateDealId = () =>
-  `DEAL-${year}-${String(Math.floor(Math.random() * 900) + 100)}`;
 
 

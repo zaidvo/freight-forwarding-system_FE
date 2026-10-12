@@ -1,15 +1,12 @@
-// src/modules/dashboard/data/modules.ts
+// src/app/dashboard/data/modules.ts
 //
-// Two tile sets — one per company context.
-// Both share Account Management, Finance, Marketing.
+// Active module tiles per company context.
 // Operations and Sales tiles are company-specific so their routes
 // lead to the relevant sub-flows without any confusion.
 
 import {
   Users,
   Ship,
-  Wallet,
-  BarChart3,
   ShoppingCart,
   TrendingUp,
   Receipt,
@@ -25,23 +22,19 @@ export type ModuleDef = {
   ready?: boolean;
 };
 
-// ─── Shared tiles (same for both companies) ───────────────────────
-const SHARED_TILES: ModuleDef[] = [
-  {
-    name: "Account Management",
-    slug: "account-management",
-    icon: Users,
-    color: "#3b82f6",
-    to: "/accounts",
-    ready: true,
-  },
-  { name: "Finance", slug: "finance", icon: Wallet, color: "#059669" },
-  { name: "Marketing", slug: "marketing", icon: BarChart3, color: "#c026d3" },
-];
+// ─── Shared tiles ─────────────────────────────────────────────────
+const ACCOUNT_MANAGEMENT: ModuleDef = {
+  name: "Account Management",
+  slug: "account-management",
+  icon: Users,
+  color: "#3b82f6",
+  to: "/accounts",
+  ready: true,
+};
 
 // ─── Freight Forwarding tiles ─────────────────────────────────────
 export const FREIGHT_MODULES: ModuleDef[] = [
-  SHARED_TILES[0], // Account Management
+  ACCOUNT_MANAGEMENT,
   {
     name: "Freight Operations",
     slug: "operations",
@@ -50,7 +43,6 @@ export const FREIGHT_MODULES: ModuleDef[] = [
     to: "/freight",
     ready: true,
   },
-  SHARED_TILES[1], // Finance
   {
     name: "Sales",
     slug: "sales",
@@ -59,12 +51,11 @@ export const FREIGHT_MODULES: ModuleDef[] = [
     to: "/sales",
     ready: true,
   },
-  SHARED_TILES[2], // Marketing
 ];
 
 // ─── Import / Export (Trading) tiles ─────────────────────────────
 export const TRADING_MODULES: ModuleDef[] = [
-  SHARED_TILES[0], // Account Management
+  ACCOUNT_MANAGEMENT,
   {
     name: "Trading Pipeline",
     slug: "trading",
@@ -73,7 +64,6 @@ export const TRADING_MODULES: ModuleDef[] = [
     to: "/trading",
     ready: true,
   },
-  SHARED_TILES[1], // Finance
   {
     name: "Sales",
     slug: "sales",
@@ -82,9 +72,4 @@ export const TRADING_MODULES: ModuleDef[] = [
     to: "/sales",
     ready: true,
   },
-  SHARED_TILES[2], // Marketing
 ];
-
-// Legacy export — kept so any existing imports don't break.
-// DashboardPage now uses FREIGHT_MODULES / TRADING_MODULES directly.
-export const MODULES = FREIGHT_MODULES;

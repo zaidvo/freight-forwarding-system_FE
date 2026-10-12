@@ -351,18 +351,3 @@ export type ImportShipment = {
   paymentReceipt: ImportPaymentReceipt | null;
   detentionInvoice: DetentionInvoice | null;
 };
-
-// ─── Default charge names for Import Clearing Invoice ────────────
-
-export const DEFAULT_CHARGE_NAMES = [
-  "THC",
-  "EMF",
-  "ISPS",
-  "LOLO",
-  "Documentation",
-  "CAFD",
-  "ISC",
-  "Gate Pass",
-  "Security Deposit",
-  "Other Charges",
-] as const;

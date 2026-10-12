@@ -72,10 +72,3 @@ export const CONTAINER_TYPES = [
   "20' FR",
   "40' FR",
 ];
-
-export const PAKISTAN_PORTS = [
-  "Karachi, Pakistan",
-  "Port Qasim, Pakistan",
-  "Gwadar, Pakistan",
-  "Lahore (KILA), Pakistan",
-];

@@ -248,14 +248,10 @@ export default function ShipmentDetailPage() {
             </span>
             <button
               type="button"
-              onClick={() =>
-                navigate(
-                  `/trading/deal/new?inquiryId=${linkedInquiry?.id ?? ""}`,
-                )
-              }
+              onClick={() => navigate("/trading")}
               className="ml-auto flex items-center gap-1 rounded-[8px] border border-sky-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-sky-700 transition hover:bg-sky-100"
             >
-              View Deal <ExternalLink className="h-3 w-3" />
+              View Trading Pipeline <ExternalLink className="h-3 w-3" />
             </button>
           </div>
         )}

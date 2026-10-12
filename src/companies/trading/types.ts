@@ -80,28 +80,10 @@ export type PurchaseOrder = {
   createdAt: string;
 };
 
-// ─── Step 5: Deal ────────────────────────────────────────────────
-export type Deal = {
-  id: string; // e.g. DEAL-2025-001
-  inquiryId: string;
-  poId: string;
-  customer: string;
-  product: string;
-  quantity: number;
-  totalValue: number;
-  currency: string;
-  status: TradingStatus;
-  freightHandledByUs?: boolean; // Step 6 decision
-  freightShipmentId?: string; // set if freight path taken
-  auditTrail: AuditEntry[];
-  createdAt: string;
-};
-
 // ─── Pipeline (full record linking all steps) ────────────────────
 export type TradingPipeline = {
   inquiry: TradingInquiry;
   quotation?: Quotation;
   piRef?: ProformaInvoiceRef;
   purchaseOrder?: PurchaseOrder;
-  deal?: Deal;
 };

@@ -1,23 +1,21 @@
 // src/modules/sales/pages/SalesPage.tsx
 //
 // Company-aware Sales landing page.
-//
-// Freight Forwarding  → Proforma Invoice, Sales Overview (soon)
-// Import / Export     → Quotation, Proforma Invoice, Purchase Order, Sales Overview (soon)
+// Freight Forwarding  → Proforma Invoice
+// Import / Export     → Import Shipments, Quotation, Proforma Invoice, Purchase Order
 
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { useCompany } from "@/app/providers/CompanyProvider";
-import { Receipt, TrendingUp, FileText, ShoppingCart, Ship } from "lucide-react";
+import { Receipt, FileText, ShoppingCart, Ship } from "lucide-react";
 
 type SaleMod = {
   label: string;
   description: string;
   icon: React.ElementType;
-  route: string | null;
+  route: string;
   accent: string;
   iconColor: string;
-  soon?: boolean;
 };
 
 const FREIGHT_SALES: SaleMod[] = [
@@ -28,15 +26,6 @@ const FREIGHT_SALES: SaleMod[] = [
     route: "/sales/proforma-invoice",
     accent: "bg-emerald-50",
     iconColor: "text-emerald-500",
-  },
-  {
-    label: "Sales Overview",
-    description: "Track sales pipeline, clients and revenue performance.",
-    icon: TrendingUp,
-    route: null,
-    accent: "bg-slate-50",
-    iconColor: "text-slate-400",
-    soon: true,
   },
 ];
 
@@ -72,15 +61,6 @@ const TRADING_SALES: SaleMod[] = [
     route: "/trading/po/new",
     accent: "bg-amber-50",
     iconColor: "text-amber-500",
-  },
-  {
-    label: "Sales Overview",
-    description: "Track sales pipeline, clients and revenue performance.",
-    icon: TrendingUp,
-    route: null,
-    accent: "bg-slate-50",
-    iconColor: "text-slate-400",
-    soon: true,
   },
 ];
 
@@ -123,14 +103,11 @@ export default function SalesPage() {
               <button
                 key={mod.label}
                 type="button"
-                onClick={() => mod.route && navigate(mod.route)}
-                disabled={!mod.route}
+                onClick={() => navigate(mod.route)}
                 className={[
                   "group flex flex-col items-start gap-4 rounded-[18px] border border-slate-200 bg-white p-6 text-left",
                   "shadow-[0_8px_24px_rgba(22,31,54,0.05)] transition",
-                  mod.route
-                    ? `cursor-pointer ${hoverBorder} hover:shadow-[0_12px_32px_rgba(22,31,54,0.09)]`
-                    : "cursor-default opacity-60",
+                  `cursor-pointer ${hoverBorder} hover:shadow-[0_12px_32px_rgba(22,31,54,0.09)]`,
                 ].join(" ")}
               >
                 <div
@@ -139,16 +116,9 @@ export default function SalesPage() {
                   <Icon className={`h-5 w-5 ${mod.iconColor}`} />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[15px] font-semibold text-slate-900">
-                      {mod.label}
-                    </span>
-                    {mod.soon && (
-                      <span className="rounded-[5px] bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                        Soon
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-[15px] font-semibold text-slate-900">
+                    {mod.label}
+                  </span>
                   <p className="mt-1 text-[13px] leading-relaxed text-slate-500">
                     {mod.description}
                   </p>
