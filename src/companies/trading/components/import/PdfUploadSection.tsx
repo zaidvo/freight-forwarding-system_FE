@@ -135,7 +135,7 @@ export default function PdfUploadSection({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
       <input
         ref={inputRef}
         type="file"
@@ -156,7 +156,7 @@ export default function PdfUploadSection({
           {uploadMessage && (
             <div
               role="status"
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px] ${
+              className={`flex min-w-0 items-start gap-2 rounded-lg border px-3 py-2 text-[12px] ${
                 uploadState === "error"
                   ? "border-rose-200 bg-rose-50 text-rose-700"
                   : uploadState === "uploading"
@@ -165,13 +165,15 @@ export default function PdfUploadSection({
               }`}
             >
               {uploadState === "uploading" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" />
               ) : uploadState === "error" ? (
-                <AlertCircle className="h-3.5 w-3.5" />
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               ) : (
-                <CheckCircle2 className="h-3.5 w-3.5" />
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               )}
-              <span>{uploadMessage}</span>
+              <span className="min-w-0 flex-1 break-all leading-relaxed">
+                {uploadMessage}
+              </span>
             </div>
           )}
 
@@ -277,18 +279,20 @@ export default function PdfUploadSection({
           {uploadMessage && (
             <div
               role="status"
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[12px] ${
+              className={`flex min-w-0 items-start gap-2 rounded-lg border px-3 py-2 text-[12px] ${
                 uploadState === "error"
                   ? "border-rose-200 bg-rose-50 text-rose-700"
                   : "border-blue-200 bg-blue-50 text-blue-700"
               }`}
             >
               {uploadState === "uploading" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" />
               ) : (
-                <AlertCircle className="h-3.5 w-3.5" />
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               )}
-              <span>{uploadMessage}</span>
+              <span className="min-w-0 flex-1 break-all leading-relaxed">
+                {uploadMessage}
+              </span>
             </div>
           )}
           <button

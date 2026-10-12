@@ -43,7 +43,7 @@ export default function LoginPage() {
 
       <section className="relative w-full max-w-[440px]">
         <div className="mb-6 flex flex-col items-center text-center">
-          <BrandLogo className="h-20 w-36" />
+          <BrandLogo className="h-24 w-52" />
           <h1 className="mt-4 text-3xl font-bold tracking-[-0.045em] text-slate-950">
             B2B Global Supplies
           </h1>

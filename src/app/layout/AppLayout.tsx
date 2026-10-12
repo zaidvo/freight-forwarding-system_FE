@@ -307,7 +307,10 @@ export function AppLayout({ children }: LayoutProps) {
         >
           {/* B2B Global Supplies logo */}
           <div className="flex h-[60px] items-center gap-2.5 border-b border-white/10 px-4">
-            <BrandLogo compact={collapsed} />
+            <BrandLogo
+              compact={collapsed}
+              className={collapsed ? "" : "h-10 w-24 shrink-0"}
+            />
             {!collapsed && (
               <span className="select-none text-[16px] font-bold tracking-[-0.02em] text-white">
                 B2B Global Supplies
