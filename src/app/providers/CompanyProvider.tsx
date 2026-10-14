@@ -28,32 +28,9 @@ export const COMPANIES: Company[] = [
   { id: "indenting", name: "Indenting", accent: "bg-amber-500" },
 ];
 
-/**
- * The canonical landing route for each workspace.
- *
- * When the user switches workspace via the dropdown the app navigates here,
- * clearing any sub-page from the previous workspace.  Keep this in sync with
- * AppRoutes.tsx — each value must be a valid route.
- */
-export const COMPANY_DEFAULT_ROUTES: Record<CompanyId, string> = {
-  "freight-forwarding": "/freight",
-  "import-export": "/trading/imports",
-  indenting: "/indenting",
-};
-
 type CompanyContextValue = {
   activeCompany: Company;
-  /** Silent state-only update.  Used by useWorkspaceSync (URL → state). */
   setActiveCompanyId: (id: CompanyId) => void;
-  /**
-   * Full workspace switch: persists state AND calls navigate(defaultRoute).
-   * Used by the workspace dropdown (state → URL direction).
-   *
-   * @param id       The workspace to switch to.
-   * @param navigate A `NavigateFunction` from `useNavigate()` — passed in by
-   *                 the caller so this provider stays router-agnostic.
-   */
-  switchCompany: (id: CompanyId, navigate: (to: string) => void) => void;
   isFreight: boolean;
   isTrading: boolean;
   isIndenting: boolean;
@@ -78,17 +55,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setActiveCompanyId(id);
   };
 
-  const switchCompany = (id: CompanyId, navigate: (to: string) => void) => {
-    handleSetCompany(id);
-    navigate(COMPANY_DEFAULT_ROUTES[id]);
-  };
-
   return (
     <CompanyContext.Provider
       value={{
         activeCompany,
         setActiveCompanyId: handleSetCompany,
-        switchCompany,
         isFreight: activeCompanyId === "freight-forwarding",
         isTrading: activeCompanyId === "import-export",
         isIndenting: activeCompanyId === "indenting",
