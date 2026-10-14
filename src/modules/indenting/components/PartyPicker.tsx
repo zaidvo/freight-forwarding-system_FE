@@ -1,6 +1,7 @@
 // src/modules/indenting/components/PartyPicker.tsx
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Search, Plus, Check, Building2, User, Loader2 } from "lucide-react";
 import { indentingService } from "../services/indentingService";
 import type { IndentingParty, IndentingPartySuggest } from "../types";
@@ -31,17 +32,57 @@ export function PartyPicker({
   const [loading, setLoading] = useState(false);
   const [isAddPartyOpen, setIsAddPartyOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 0 });
 
   // Close on outside click
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event: PointerEvent) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setIsOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("pointerdown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const updatePosition = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+      const rect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const margin = 8;
+      const gap = 4;
+      const below = window.innerHeight - rect.bottom - gap;
+      const above = rect.top - gap;
+      const placeAbove = menuRect.height > below && above > below;
+      const top = placeAbove
+        ? Math.max(margin, rect.top - Math.min(menuRect.height, above) - gap)
+        : Math.max(margin, Math.min(rect.bottom + gap, window.innerHeight - menuRect.height - margin));
+      const width = Math.min(rect.width, window.innerWidth - margin * 2);
+      const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+      setMenuPosition({ top, left, width });
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen, loading, suggestions.length]);
 
   // Fetch suggestions when query changes or dropdown opens
   useEffect(() => {
@@ -102,7 +143,7 @@ export function PartyPicker({
       </div>
 
       {selectedParty && value ? (
-        <div className="flex items-center justify-between p-3 border border-slate-200 bg-slate-50/80 rounded-lg text-sm">
+        <div ref={(node) => { triggerRef.current = node; }} className="flex items-center justify-between p-3 border border-slate-200 bg-slate-50/80 rounded-lg text-sm">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
               <Building2 className="w-4 h-4" />
@@ -123,6 +164,8 @@ export function PartyPicker({
           {!disabled && (
             <button
               type="button"
+              aria-haspopup="listbox"
+              aria-expanded={isOpen}
               onClick={() => setIsOpen(true)}
               className="text-xs font-medium text-slate-500 hover:text-amber-600 px-2 py-1 hover:bg-white rounded transition-colors"
             >
@@ -131,9 +174,14 @@ export function PartyPicker({
           )}
         </div>
       ) : (
-        <div
+        <button
+          type="button"
+          ref={(node) => { triggerRef.current = node; }}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
           onClick={() => !disabled && setIsOpen(true)}
-          className={`w-full px-3 py-2 border rounded-lg text-sm flex items-center justify-between cursor-pointer transition-colors ${
+          disabled={disabled}
+          className={`w-full px-3 py-2 border rounded-lg text-sm flex items-center justify-between cursor-pointer text-left transition-colors ${
             disabled
               ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
               : isOpen
@@ -143,12 +191,17 @@ export function PartyPicker({
         >
           <span>Select {label.toLowerCase()}...</span>
           <Search className="w-4 h-4 text-slate-400" />
-        </div>
+        </button>
       )}
 
       {/* Dropdown Popover */}
-      {isOpen && (
-        <div className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden animate-in fade-in-50 duration-100">
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          role="listbox"
+          style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left, width: menuPosition.width || undefined, zIndex: "var(--z-dropdown)", visibility: menuPosition.top === 0 ? "hidden" : "visible" }}
+          className="max-h-[calc(100dvh-16px)] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+        >
           <div className="p-2 border-b border-slate-100 bg-slate-50/50">
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" />
@@ -185,10 +238,13 @@ export function PartyPicker({
               </div>
             ) : (
               suggestions.map((party) => (
-                <div
+                <button
                   key={party.id}
+                  type="button"
+                  role="option"
+                  aria-selected={value === party.id}
                   onClick={() => handleSelect(party)}
-                  className={`p-2.5 rounded-lg cursor-pointer flex items-center justify-between text-left hover:bg-amber-50/60 transition-colors ${
+                  className={`w-full p-2.5 rounded-lg flex items-center justify-between text-left hover:bg-amber-50/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-500 ${
                     value === party.id ? "bg-amber-50/80" : ""
                   }`}
                 >
@@ -211,11 +267,12 @@ export function PartyPicker({
                   {value === party.id && (
                     <Check className="w-4 h-4 text-amber-600 shrink-0" />
                   )}
-                </div>
+                </button>
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Inline Create Party Dialog */}
