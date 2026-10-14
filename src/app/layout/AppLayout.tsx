@@ -5,24 +5,17 @@
 // Sub-items inside each section are company-specific.
 // Sidebar is collapsible with an arrow toggle pinned to its edge.
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
-  FileText,
-  Handshake,
-  LayoutGrid,
   Loader2,
   LogOut,
-  Receipt,
-  Ship,
-  ShoppingCart,
-  TrendingUp,
-  Users,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import BrandLogo from "@/shared/components/BrandLogo";
@@ -31,175 +24,13 @@ import {
   COMPANIES,
   type CompanyId,
 } from "@/app/providers/CompanyProvider";
+import { useWorkspaceSync } from "@/app/hooks/useWorkspaceSync";
+import { useUnsavedChanges } from "@/shared/lib/useUnsavedChanges";
+import { FREIGHT_NAV, INDENTING_NAV, TRADING_NAV } from "./navConfig";
 
 type LayoutProps = { children: ReactNode };
-type NavItem = {
-  label: string;
-  to?: string;
-  icon: typeof LayoutGrid;
-  moduleSlug?: string;
-};
-type NavSection = { title: string; items: NavItem[] };
-
 const COMING_SOON_WORKSPACES = [
   { name: "Customers", accent: "bg-violet-500" },
-];
-
-const INDENTING_NAV: NavSection[] = [
-  {
-    title: "Main",
-    items: [
-      { label: "Dashboard", to: "/", icon: LayoutGrid },
-      {
-        label: "Account Management",
-        to: "/accounts",
-        icon: Users,
-        moduleSlug: "account-management",
-      },
-    ],
-  },
-  {
-    title: "Indenting",
-    items: [
-      {
-        label: "Deals",
-        to: "/indenting",
-        icon: Handshake,
-        moduleSlug: "indenting",
-      },
-      {
-        label: "New Deal",
-        to: "/indenting/deals/new",
-        icon: Receipt,
-        moduleSlug: "indenting",
-      },
-      {
-        label: "Parties Directory",
-        to: "/indenting/parties",
-        icon: Users,
-        moduleSlug: "indenting",
-      },
-    ],
-  },
-];
-
-// ─── Nav sections per company ─────────────────────────────────────────────────
-// Structure mirrors the dashboard tiles so users always know where they are.
-
-const FREIGHT_NAV: NavSection[] = [
-  {
-    title: "Main",
-    items: [
-      { label: "Dashboard", to: "/", icon: LayoutGrid },
-      {
-        label: "Account Management",
-        to: "/accounts",
-        icon: Users,
-        moduleSlug: "account-management",
-      },
-    ],
-  },
-  {
-    title: "Operations",
-    items: [
-      {
-        label: "Freight Operations",
-        to: "/freight",
-        icon: Ship,
-        moduleSlug: "operations",
-      },
-      {
-        label: "New Inquiry",
-        to: "/freight/inquiry/new",
-        icon: ClipboardList,
-        moduleSlug: "operations",
-      },
-      {
-        label: "Packing List",
-        to: "/operations/packing-list",
-        icon: ClipboardList,
-        moduleSlug: "operations",
-      },
-      {
-        label: "Bill of Lading",
-        to: "/operations/bill-of-lading",
-        icon: FileText,
-        moduleSlug: "operations",
-      },
-    ],
-  },
-  {
-    title: "Sales",
-    items: [
-      {
-        label: "Proforma Invoice",
-        to: "/sales/proforma-invoice",
-        icon: Receipt,
-        moduleSlug: "sales",
-      },
-    ],
-  },
-];
-
-const TRADING_NAV: NavSection[] = [
-  {
-    title: "Main",
-    items: [
-      { label: "Dashboard", to: "/", icon: LayoutGrid },
-      {
-        label: "Account Management",
-        to: "/accounts",
-        icon: Users,
-        moduleSlug: "account-management",
-      },
-    ],
-  },
-  {
-    title: "Operations",
-    items: [
-      {
-        label: "Trading Pipeline",
-        to: "/trading",
-        icon: TrendingUp,
-        moduleSlug: "operations",
-      },
-      {
-        label: "New Inquiry",
-        to: "/trading/inquiry/new",
-        icon: ShoppingCart,
-        moduleSlug: "operations",
-      },
-    ],
-  },
-  {
-    title: "Sales",
-    items: [
-      {
-        label: "Import Shipments",
-        to: "/trading/imports",
-        icon: Ship,
-        moduleSlug: "sales",
-      },
-      {
-        label: "Quotation",
-        to: "/trading/quotation/new",
-        icon: FileText,
-        moduleSlug: "sales",
-      },
-      {
-        label: "Proforma Invoice",
-        to: "/trading/pi/new",
-        icon: Receipt,
-        moduleSlug: "sales",
-      },
-      {
-        label: "Purchase Order",
-        to: "/trading/po/new",
-        icon: ShoppingCart,
-        moduleSlug: "sales",
-      },
-    ],
-  },
 ];
 
 // ─── Page label map ───────────────────────────────────────────────────────────
@@ -230,12 +61,146 @@ const PAGE_LABELS: Record<string, string> = {
   "/indenting/parties": "Indenting Parties",
 };
 
+type FloatingAlignment = "start" | "end";
+
+function useFloatingMenuPosition(
+  open: boolean,
+  triggerRef: RefObject<HTMLElement | null>,
+  menuRef: RefObject<HTMLDivElement | null>,
+  alignment: FloatingAlignment = "start",
+) {
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+    const updatePosition = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const gap = 8;
+      const margin = 8;
+      const below = window.innerHeight - rect.bottom - gap;
+      const above = rect.top - gap;
+      const placeAbove = menuRect.height > below && above > below;
+      const top = placeAbove
+        ? Math.max(margin, rect.top - Math.min(menuRect.height, above) - gap)
+        : Math.min(rect.bottom + gap, window.innerHeight - menuRect.height - margin);
+      const desiredLeft = alignment === "end" ? rect.right - menuRect.width : rect.left;
+      const left = Math.max(margin, Math.min(desiredLeft, window.innerWidth - menuRect.width - margin));
+      setPosition({ top, left });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [alignment, menuRef, open, triggerRef]);
+
+  return position;
+}
+
+// ─── Unsaved-changes confirmation dialog ─────────────────────────────────────
+interface UnsavedChangesDialogProps {
+  targetCompanyName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function UnsavedChangesDialog({
+  targetCompanyName,
+  onConfirm,
+  onCancel,
+}: UnsavedChangesDialogProps) {
+  // Trap focus: close on Escape
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="unsaved-dialog-title"
+      aria-describedby="unsaved-dialog-desc"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onPointerDown={(e) => {
+        // Close on backdrop click
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div className="mx-4 w-full max-w-[400px] rounded-[14px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(22,31,54,0.22)]">
+        <div className="mb-4 flex items-start gap-3">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-50">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+          </span>
+          <div>
+            <h2
+              id="unsaved-dialog-title"
+              className="text-[15px] font-semibold text-slate-900"
+            >
+              Unsaved changes
+            </h2>
+            <p
+              id="unsaved-dialog-desc"
+              className="mt-1 text-[13px] leading-relaxed text-slate-500"
+            >
+              You have unsaved changes on this page. Switching to{" "}
+              <span className="font-medium text-slate-700">
+                {targetCompanyName}
+              </span>{" "}
+              will discard your progress.
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-[8px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            Stay on this page
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-[8px] bg-rose-600 px-4 py-2 text-[13px] font-medium text-white transition hover:bg-rose-700"
+          >
+            Discard &amp; switch
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export function AppLayout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasModuleAccess } = useAuth();
-  const { activeCompany, setActiveCompanyId, isFreight, isIndenting } = useCompany();
+  const { activeCompany, switchCompany, isFreight, isIndenting } = useCompany();
+  const { isDirty, markClean } = useUnsavedChanges();
+
+  // ── Sync URL → switcher state ─────────────────────────────────────────────
+  useWorkspaceSync();
+
+  // ── Pending switch (set when dirty confirmation is needed) ────────────────
+  const [pendingCompanyId, setPendingCompanyId] = useState<CompanyId | null>(null);
+  const pendingCompanyName =
+    pendingCompanyId != null
+      ? (COMPANIES.find((c) => c.id === pendingCompanyId)?.name ?? "")
+      : "";
 
   const [collapsed, setCollapsed] = useState(
     () => window.localStorage.getItem("freightos-sidebar-collapsed") === "true",
@@ -243,8 +208,12 @@ export function AppLayout({ children }: LayoutProps) {
   const [companyOpen, setCompanyOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const companySwitcherRef = useRef<HTMLDivElement>(null);
+  const companyTriggerRef = useRef<HTMLButtonElement>(null);
+  const companyMenuRef = useRef<HTMLDivElement>(null);
+  const profileTriggerRef = useRef<HTMLButtonElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const companyMenuPosition = useFloatingMenuPosition(companyOpen, companyTriggerRef, companyMenuRef);
+  const profileMenuPosition = useFloatingMenuPosition(profileOpen, profileTriggerRef, profileMenuRef, "end");
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -254,31 +223,51 @@ export function AppLayout({ children }: LayoutProps) {
   }, [collapsed]);
 
   useEffect(() => {
-    if (!companyOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        companySwitcherRef.current &&
-        !companySwitcherRef.current.contains(e.target as Node)
-      ) {
-        setCompanyOpen(false);
-      }
+    if (!companyOpen && !profileOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (companyOpen && !companyTriggerRef.current?.contains(target) && !companyMenuRef.current?.contains(target)) setCompanyOpen(false);
+      if (profileOpen && !profileTriggerRef.current?.contains(target) && !profileMenuRef.current?.contains(target)) setProfileOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [companyOpen]);
-  useEffect(() => {
-    if (!profileOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(e.target as Node)
-      ) {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setCompanyOpen(false);
         setProfileOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [profileOpen]);
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [companyOpen, profileOpen]);
+
+  // ── Workspace switch handler ───────────────────────────────────────────────
+  const handleCompanySelect = (id: CompanyId) => {
+    setCompanyOpen(false);
+
+    // No-op if already active
+    if (id === activeCompany.id) return;
+
+    if (isDirty) {
+      // Stage the switch — show confirmation dialog first.
+      setPendingCompanyId(id);
+    } else {
+      switchCompany(id, navigate);
+    }
+  };
+
+  const handleConfirmSwitch = () => {
+    if (pendingCompanyId == null) return;
+    markClean(); // clear dirty state before navigating
+    switchCompany(pendingCompanyId, navigate);
+    setPendingCompanyId(null);
+  };
+
+  const handleCancelSwitch = () => {
+    setPendingCompanyId(null);
+  };
 
   const baseNavSections = isIndenting
     ? INDENTING_NAV
@@ -340,7 +329,12 @@ export function AppLayout({ children }: LayoutProps) {
   const activeSectionTitle = useMemo(() => {
     for (const section of navSections) {
       if (
-        section.items.some((item) => item.to && location.pathname === item.to)
+        section.items.some(
+          (item) =>
+            item.to &&
+            (location.pathname === item.to ||
+              (item.to !== "/" && location.pathname.startsWith(`${item.to}/`))),
+        )
       ) {
         return section.title;
       }
@@ -349,11 +343,20 @@ export function AppLayout({ children }: LayoutProps) {
   }, [location.pathname, navSections]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(79,124,255,0.08),_transparent_28%),linear-gradient(180deg,#fbfcff_0%,#f4f6fb_100%)] text-slate-900">
-      <div className="flex min-h-screen overflow-hidden bg-white/60">
+    <div className="h-dvh min-h-0 overflow-hidden bg-[radial-gradient(circle_at_top_right,_rgba(79,124,255,0.08),_transparent_28%),linear-gradient(180deg,#fbfcff_0%,#f4f6fb_100%)] text-slate-900">
+      {/* ── Unsaved-changes confirmation dialog ──────────────────────────────── */}
+      {pendingCompanyId != null && (
+        <UnsavedChangesDialog
+          targetCompanyName={pendingCompanyName}
+          onConfirm={handleConfirmSwitch}
+          onCancel={handleCancelSwitch}
+        />
+      )}
+
+      <div className="grid h-full min-h-0 grid-cols-[auto_minmax(0,1fr)] bg-white/60">
         {/* ── SIDEBAR ── */}
         <aside
-          className={`relative flex shrink-0 flex-col border-r border-slate-900 bg-slate-950 transition-[width] duration-200 ease-in-out ${
+          className={`relative flex h-dvh min-h-0 shrink-0 flex-col border-r border-slate-900 bg-slate-950 transition-[width] duration-200 ease-in-out ${
             collapsed ? "w-[68px]" : "w-[224px]"
           }`}
         >
@@ -371,7 +374,7 @@ export function AppLayout({ children }: LayoutProps) {
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-4 space-y-4">
+          <nav aria-label="Primary navigation" className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-2 py-4">
             {navSections.map((section) => (
               <section key={section.title}>
                 {!collapsed && (
@@ -390,16 +393,16 @@ export function AppLayout({ children }: LayoutProps) {
                   {section.items.map((item) => {
                     const Icon = item.icon;
                     const active = item.to
-                      ? location.pathname === item.to
+                      ? location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(`${item.to}/`))
                       : false;
 
                     const inner = (
                       <span
                         title={item.label}
                         className={[
-                          "flex items-center gap-3 rounded-[8px] px-2.5 py-2 text-[13px] font-medium transition-colors",
+                          "relative flex items-center gap-3 rounded-[8px] border border-transparent px-2.5 py-2 text-[13px] font-medium transition-colors before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400",
                           active
-                            ? "bg-white/10 text-white shadow-[inset_3px_0_0_rgba(56,189,248,0.95)]"
+                            ? "bg-white/10 text-white before:bg-sky-400"
                             : "text-slate-300 hover:bg-white/10 hover:text-white",
                           collapsed ? "justify-center" : "",
                         ].join(" ")}
@@ -421,7 +424,7 @@ export function AppLayout({ children }: LayoutProps) {
                     return (
                       <li key={item.label}>
                         {item.to ? (
-                          <Link to={item.to} className="block">
+                          <Link to={item.to} className="block rounded-[8px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
                             {inner}
                           </Link>
                         ) : (
@@ -481,11 +484,15 @@ export function AppLayout({ children }: LayoutProps) {
         {/* ── MAIN ── */}
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Top header */}
-          <header className="flex h-[60px] shrink-0 items-center gap-3 border-b border-slate-200/80 bg-white/90 px-5 backdrop-blur-xl">
+          <header className="relative z-10 flex h-[60px] shrink-0 items-center gap-3 border-b border-slate-200/80 bg-white/90 px-5 backdrop-blur-xl">
             {/* Company switcher */}
-            <div ref={companySwitcherRef} className="relative">
+            <div>
               <button
                 type="button"
+                ref={companyTriggerRef}
+                aria-haspopup="menu"
+                aria-expanded={companyOpen}
+                aria-controls="workspace-switcher-menu"
                 onClick={() => setCompanyOpen((o) => !o)}
                 className={[
                   "flex items-center gap-2 rounded-[8px] border px-3 py-1.5 text-[13px] font-medium transition-colors",
@@ -503,8 +510,15 @@ export function AppLayout({ children }: LayoutProps) {
                 />
               </button>
 
-              {companyOpen && (
-                <div className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[200px] rounded-[10px] border border-slate-200 bg-white p-1.5 shadow-[0_8px_30px_rgba(22,31,54,0.12)]">
+              {companyOpen && createPortal(
+                <div
+                  id="workspace-switcher-menu"
+                  ref={companyMenuRef}
+                  role="menu"
+                  aria-label="Switch workspace"
+                  style={{ position: "fixed", top: companyMenuPosition.top, left: companyMenuPosition.left, zIndex: "var(--z-dropdown)", visibility: companyMenuPosition.top === 0 ? "hidden" : "visible" }}
+                  className="max-h-[calc(100dvh-16px)] min-w-[220px] overflow-y-auto rounded-[10px] border border-slate-200 bg-white p-1.5 shadow-[0_8px_30px_rgba(22,31,54,0.16)]"
+                >
                   <p className="mb-1 px-2.5 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                     Switch workspace
                   </p>
@@ -512,10 +526,8 @@ export function AppLayout({ children }: LayoutProps) {
                     <button
                       key={option.id}
                       type="button"
-                      onClick={() => {
-                        setActiveCompanyId(option.id as CompanyId);
-                        setCompanyOpen(false);
-                      }}
+                      role="menuitem"
+                      onClick={() => handleCompanySelect(option.id as CompanyId)}
                       className={[
                         "flex w-full items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-slate-50",
                         option.id === activeCompany.id ? "bg-blue-50/70" : "",
@@ -537,6 +549,7 @@ export function AppLayout({ children }: LayoutProps) {
                     <button
                       key={option.name}
                       type="button"
+                      role="menuitem"
                       disabled
                       aria-label={`${option.name} workspace coming soon`}
                       className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-left text-[13px] opacity-60"
@@ -552,7 +565,8 @@ export function AppLayout({ children }: LayoutProps) {
                       </span>
                     </button>
                   ))}
-                </div>
+                </div>,
+                document.body,
               )}
             </div>
 
@@ -563,9 +577,13 @@ export function AppLayout({ children }: LayoutProps) {
             </div>
 
             {/* Profile actions */}
-            <div ref={profileMenuRef} className="relative ml-auto">
+            <div className="ml-auto">
               <button
                 type="button"
+                ref={profileTriggerRef}
+                aria-haspopup="menu"
+                aria-expanded={profileOpen}
+                aria-controls="profile-menu"
                 title={user?.full_name}
                 onClick={() => setProfileOpen((open) => !open)}
                 className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-sky-100 to-sky-200 text-[12px] font-bold text-sky-600 transition ring-blue-100 hover:ring-4"
@@ -573,8 +591,15 @@ export function AppLayout({ children }: LayoutProps) {
                 {avatarInitials}
               </button>
 
-              {profileOpen && (
-                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[220px] rounded-[10px] border border-slate-200 bg-white p-2 shadow-[0_10px_30px_rgba(22,31,54,0.14)]">
+              {profileOpen && createPortal(
+                <div
+                  id="profile-menu"
+                  ref={profileMenuRef}
+                  role="menu"
+                  aria-label="Profile actions"
+                  style={{ position: "fixed", top: profileMenuPosition.top, left: profileMenuPosition.left, zIndex: "var(--z-dropdown)", visibility: profileMenuPosition.top === 0 ? "hidden" : "visible" }}
+                  className="max-h-[calc(100dvh-16px)] w-[220px] overflow-y-auto rounded-[10px] border border-slate-200 bg-white p-2 shadow-[0_10px_30px_rgba(22,31,54,0.16)]"
+                >
                   <div className="flex items-center gap-2.5 rounded-[8px] px-2 py-2">
                     <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sky-100 to-sky-200 text-[12px] font-bold text-sky-600">
                       {avatarInitials}
@@ -590,6 +615,7 @@ export function AppLayout({ children }: LayoutProps) {
                   </div>
                   <button
                     type="button"
+                    role="menuitem"
                     onClick={handleLogout}
                     disabled={loggingOut}
                     className="mt-1 flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[13px] font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-70"
@@ -601,12 +627,13 @@ export function AppLayout({ children }: LayoutProps) {
                     )}
                     {loggingOut ? "Logging out..." : "Logout"}
                   </button>
-                </div>
+                </div>,
+                document.body,
               )}
             </div>
           </header>
 
-          <main className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+          <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-6 py-6">
             {children}
           </main>
         </div>
@@ -616,9 +643,3 @@ export function AppLayout({ children }: LayoutProps) {
 }
 
 export default AppLayout;
-
-
-
-
-
-

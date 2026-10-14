@@ -71,3 +71,8 @@ export default defineConfig([
   },
 ])
 ```
+
+
+use below :  
+
+https://ui.shadcn.com/docs/components/base/resizable

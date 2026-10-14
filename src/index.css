@@ -6,6 +6,10 @@
 
 @layer base {
   :root {
+    --z-base: 0;
+    --z-sticky: 100;
+    --z-dropdown: 500;
+    --z-modal: 1000;
     --background: 0 0% 100%;
     --foreground: 222 27% 14%;
     --card: 0 0% 100%;
